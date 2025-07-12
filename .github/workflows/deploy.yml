@@ -58,8 +58,24 @@ jobs:
     - name: Get ECR Repository URL
       working-directory: ./terraform-simple
       run: |
-        # Obtener la URL del repositorio ECR (creado o existente)
-        echo "ECR_REPO_URL=$(terraform output -raw ecr_repository_url)" >> $GITHUB_ENV
+        # Construir la URL del repositorio ECR manualmente
+        ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        ECR_REPO_URL="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${PROJECT_NAME}-lambda"
+        echo "ECR_REPO_URL=${ECR_REPO_URL}" >> $GITHUB_ENV
+        echo "ECR Repository URL: ${ECR_REPO_URL}"
+    
+    - name: Ensure ECR Repository Exists
+      run: |
+        # Verificar si el repositorio ECR existe, crearlo si no
+        if ! aws ecr describe-repositories --repository-names "${PROJECT_NAME}-lambda" --region ${AWS_REGION} > /dev/null 2>&1; then
+          echo "Creating ECR repository ${PROJECT_NAME}-lambda..."
+          aws ecr create-repository \
+            --repository-name "${PROJECT_NAME}-lambda" \
+            --image-scanning-configuration scanOnPush=true \
+            --region ${AWS_REGION}
+        else
+          echo "ECR repository ${PROJECT_NAME}-lambda already exists"
+        fi
     
     - name: Login to Amazon ECR
       id: login-ecr
@@ -102,6 +118,11 @@ jobs:
     - name: Terraform Apply (Full Infrastructure)
       working-directory: ./terraform-simple
       run: terraform apply -auto-approve tfplan
+    
+    - name: Prepare ML Model
+      run: |
+        echo "Preparing ML model for deployment..."
+        python prepare_ml_model.py
     
     - name: Build and Push Real Application Image
       env:

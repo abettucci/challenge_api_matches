@@ -110,24 +110,32 @@ def create_tables():
         logger.info(f"Tabla de pares ya existe o error: {e}")
 
 def calculate_similarity(title1: str, title2: str) -> float:
-    """Calcular similitud entre dos títulos usando similitud de Jaccard"""
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.metrics.pairwise import cosine_similarity
-    
-    # Normalizar títulos
-    title1_norm = title1.lower().strip()
-    title2_norm = title2.lower().strip()
-    
-    # Si son exactamente iguales
-    if title1_norm == title2_norm:
-        return 1.0
-    
-    # Calcular similitud usando TF-IDF y cosine similarity
-    vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 2))
-    tfidf_matrix = vectorizer.fit_transform([title1_norm, title2_norm])
-    similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-    
-    return float(similarity)
+    """Calcular similitud entre dos títulos usando ML o fallback básico"""
+    try:
+        # Intentar usar el modelo de ML
+        from ml_similarity import get_ml_similarity
+        ml_result = get_ml_similarity(title1, title2)
+        return ml_result['similarity_score']
+    except Exception as e:
+        logger.warning(f"Error usando modelo ML, usando fallback básico: {e}")
+        # Fallback a similitud básica
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+        
+        # Normalizar títulos
+        title1_norm = title1.lower().strip()
+        title2_norm = title2.lower().strip()
+        
+        # Si son exactamente iguales
+        if title1_norm == title2_norm:
+            return 1.0
+        
+        # Calcular similitud usando TF-IDF y cosine similarity
+        vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 2))
+        tfidf_matrix = vectorizer.fit_transform([title1_norm, title2_norm])
+        similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+        
+        return float(similarity)
 
 def generate_pair_id(item_a: int, item_b: int) -> str:
     """Generar ID único para un par de ítems"""
@@ -424,6 +432,111 @@ def get_all_pairs():
     }
 })
 def get_pair(pair_id):
+
+@app.route('/ml/train', methods=['POST'])
+@swag_from({
+    'parameters': [
+        {
+            'name': 'body',
+            'in': 'body',
+            'required': True,
+            'schema': {
+                'type': 'object',
+                'properties': {
+                    'training_data': {
+                        'type': 'array',
+                        'items': {
+                            'type': 'object',
+                            'properties': {
+                                'item_a_title': {'type': 'string'},
+                                'item_b_title': {'type': 'string'},
+                                'is_similar': {'type': 'integer'}
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    'responses': {
+        200: {
+            'description': 'Modelo entrenado exitosamente'
+        },
+        400: {
+            'description': 'Datos de entrenamiento inválidos'
+        }
+    }
+})
+def train_model():
+    """Entrenar el modelo de Machine Learning"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'training_data' not in data:
+            return jsonify({
+                'status': 'error',
+                'message': 'Se requieren datos de entrenamiento'
+            }), 400
+        
+        training_data = data['training_data']
+        
+        if not isinstance(training_data, list) or len(training_data) == 0:
+            return jsonify({
+                'status': 'error',
+                'message': 'Los datos de entrenamiento deben ser una lista no vacía'
+            }), 400
+        
+        # Validar estructura de datos
+        for item in training_data:
+            if not all(key in item for key in ['item_a_title', 'item_b_title', 'is_similar']):
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Cada item debe contener item_a_title, item_b_title e is_similar'
+                }), 400
+        
+        # Entrenar modelo
+        from ml_similarity import train_ml_model
+        train_ml_model(training_data)
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Modelo entrenado exitosamente con {len(training_data)} pares de datos',
+            'training_samples': len(training_data)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error entrenando modelo: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Error entrenando modelo: {str(e)}'
+        }), 500
+
+@app.route('/ml/status', methods=['GET'])
+@swag_from({
+    'responses': {
+        200: {
+            'description': 'Estado del modelo obtenido exitosamente'
+        }
+    }
+})
+def get_model_status():
+    """Obtener el estado del modelo de Machine Learning"""
+    try:
+        from ml_similarity import ml_detector
+        
+        return jsonify({
+            'status': 'success',
+            'model_trained': ml_detector.is_trained,
+            'model_path': ml_detector.model_path,
+            'message': 'Modelo entrenado y listo' if ml_detector.is_trained else 'Modelo no entrenado'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error obteniendo estado del modelo: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Error obteniendo estado del modelo: {str(e)}'
+        }), 500
     """Obtener un par específico por ID"""
     try:
         pairs_table = dynamodb.Table(PAIRS_TABLE)
