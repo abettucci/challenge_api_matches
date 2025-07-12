@@ -87,16 +87,20 @@ jobs:
         ECR_REPOSITORY: ${{ env.PROJECT_NAME }}-lambda
       run: |
         echo "Creating dummy image for initial Lambda creation..."
-        # Crear un Dockerfile temporal simple
-        cat > Dockerfile.dummy << 'EOF'
-        FROM public.ecr.aws/lambda/python:3.9
-        COPY <<EOF /var/task/lambda_function.py
+        
+        # Crear archivo lambda_function.py temporal
+        cat > lambda_function_dummy.py << 'EOF'
         def lambda_handler(event, context):
             return {
                 'statusCode': 200,
                 'body': '{"message": "Dummy function - will be replaced"}'
             }
         EOF
+        
+        # Crear un Dockerfile temporal simple
+        cat > Dockerfile.dummy << 'EOF'
+        FROM public.ecr.aws/lambda/python:3.9
+        COPY lambda_function_dummy.py /var/task/lambda_function.py
         CMD ["lambda_function.lambda_handler"]
         EOF
         
@@ -108,8 +112,8 @@ jobs:
         docker tag $ECR_REGISTRY/$ECR_REPOSITORY:dummy $ECR_REGISTRY/$ECR_REPOSITORY:latest
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
         
-        # Limpiar
-        rm -f Dockerfile.dummy
+        # Limpiar archivos temporales
+        rm -f Dockerfile.dummy lambda_function_dummy.py
     
     - name: Terraform Plan
       working-directory: ./terraform-simple
