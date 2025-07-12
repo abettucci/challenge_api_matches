@@ -93,10 +93,22 @@ class MLSimilarityDetector:
         # Verificar que tenemos títulos válidos
         valid_titles = [title for title in all_titles if title and title.strip()]
         if not valid_titles:
+            logger.error("No hay títulos válidos para entrenar el vectorizer TF-IDF")
+            logger.error(f"Total de títulos procesados: {len(all_titles)}")
+            logger.error(f"Ejemplos de títulos originales: {all_titles[:5]}")
             raise ValueError("No hay títulos válidos para entrenar el vectorizer TF-IDF")
         
         logger.info(f"Entrenando TF-IDF con {len(valid_titles)} títulos únicos")
         logger.info(f"Ejemplos de títulos: {valid_titles[:3]}")
+        
+        # Verificar que hay suficientes palabras únicas
+        all_words = set()
+        for title in valid_titles:
+            words = title.lower().split()
+            all_words.update(words)
+        
+        logger.info(f"Vocabulario total: {len(all_words)} palabras únicas")
+        logger.info(f"Ejemplos de palabras: {list(all_words)[:10]}")
         
         self.tfidf_vectorizer = TfidfVectorizer(
             analyzer='word',

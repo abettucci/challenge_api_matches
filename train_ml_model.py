@@ -17,15 +17,52 @@ def load_training_data_from_csv(csv_path: str) -> List[Dict]:
         df = pd.read_csv(csv_path)
         training_data = []
         
-        for _, row in df.iterrows():
-            # Asumimos que el CSV tiene columnas item_a_title, item_b_title, is_similar
-            training_data.append({
-                'item_a_title': str(row.get('item_a_title', '')),
-                'item_b_title': str(row.get('item_b_title', '')),
-                'is_similar': int(row.get('is_similar', 0))  # 0 o 1
-            })
+        logger.info(f"CSV cargado con {len(df)} filas")
+        logger.info(f"Columnas disponibles: {list(df.columns)}")
         
-        logger.info(f"Cargados {len(training_data)} pares de entrenamiento")
+        # Mapear columnas según el formato del CSV
+        title_a_col = None
+        title_b_col = None
+        
+        # Buscar columnas de títulos
+        if 'TITLE_A' in df.columns and 'TITLE_B' in df.columns:
+            title_a_col = 'TITLE_A'
+            title_b_col = 'TITLE_B'
+        elif 'item_a_title' in df.columns and 'item_b_title' in df.columns:
+            title_a_col = 'item_a_title'
+            title_b_col = 'item_b_title'
+        else:
+            logger.warning("No se encontraron columnas de títulos válidas")
+            return []
+        
+        logger.info(f"Usando columnas: {title_a_col}, {title_b_col}")
+        
+        for idx, row in df.iterrows():
+            title_a = str(row.get(title_a_col, '')).strip()
+            title_b = str(row.get(title_b_col, '')).strip()
+            
+            # Solo incluir pares con títulos válidos
+            if title_a and title_b:
+                # Para este dataset, asumimos que si los títulos son iguales son similares
+                # y si son diferentes, no son similares (esto es una aproximación)
+                is_similar = 1 if title_a.lower() == title_b.lower() else 0
+                
+                training_data.append({
+                    'item_a_title': title_a,
+                    'item_b_title': title_b,
+                    'is_similar': is_similar
+                })
+            else:
+                logger.warning(f"Fila {idx}: Títulos vacíos - A: '{title_a}', B: '{title_b}'")
+        
+        logger.info(f"Cargados {len(training_data)} pares válidos de entrenamiento")
+        
+        # Mostrar algunos ejemplos
+        if training_data:
+            logger.info("Ejemplos de datos cargados:")
+            for i, pair in enumerate(training_data[:3]):
+                logger.info(f"  {i+1}. A: '{pair['item_a_title']}' | B: '{pair['item_b_title']}' | Similar: {pair['is_similar']}")
+        
         return training_data
     
     except Exception as e:
@@ -100,10 +137,15 @@ def main():
     # Intentar cargar datos desde CSV
     training_data = load_training_data_from_csv('data_matches - dataset.csv')
     
-    # Si no hay datos, usar datos sintéticos
+    # Si no hay datos válidos, usar datos sintéticos
     if not training_data:
-        logger.info("No se encontraron datos de entrenamiento, usando datos sintéticos...")
+        logger.info("No se encontraron datos válidos de entrenamiento, usando datos sintéticos...")
         training_data = create_synthetic_training_data()
+    elif len(training_data) < 10:
+        logger.warning(f"Solo se encontraron {len(training_data)} pares válidos, complementando con datos sintéticos...")
+        synthetic_data = create_synthetic_training_data()
+        training_data.extend(synthetic_data)
+        logger.info(f"Total de datos de entrenamiento: {len(training_data)} pares")
     
     # Dividir datos en entrenamiento y validación (80/20)
     split_index = int(len(training_data) * 0.8)
