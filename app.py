@@ -47,21 +47,25 @@ swagger_template = {
 
 swagger = Swagger(app, config=swagger_config, template=swagger_template)
 
-# Configuración de DynamoDB
-if os.getenv('AWS_ENDPOINT_URL'):
-    # Para desarrollo local con DynamoDB local
-    dynamodb = boto3.resource('dynamodb', 
+# Nombres de las tablas
+ITEMS_TABLE = 'items'
+PAIRS_TABLE = 'item_pairs'
+
+def get_dynamodb():
+    """Obtener cliente de DynamoDB configurado según el entorno"""
+    if os.getenv('AWS_ENDPOINT_URL'):
+        # Para desarrollo local con DynamoDB local
+        return boto3.resource('dynamodb', 
                              endpoint_url=os.getenv('AWS_ENDPOINT_URL'),
                              region_name='us-east-1',
                              aws_access_key_id='dummy',
                              aws_secret_access_key='dummy')
-else:
-    # Para producción en AWS
-    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+    else:
+        # Para producción en AWS
+        return boto3.resource('dynamodb', region_name='us-east-1')
 
-# Nombres de las tablas
-ITEMS_TABLE = 'items'
-PAIRS_TABLE = 'item_pairs'
+# Cliente de DynamoDB por defecto
+dynamodb = get_dynamodb()
 
 def create_tables():
     """Crear tablas en DynamoDB si no existen"""

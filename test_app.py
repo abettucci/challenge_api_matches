@@ -1,8 +1,9 @@
 import pytest
 import json
 import boto3
+import os
 from moto import mock_aws
-from app import app, create_tables, calculate_similarity, generate_pair_id
+from app import app, create_tables, calculate_similarity, generate_pair_id, get_dynamodb
 
 @pytest.fixture
 def client(mock_dynamodb_tables):
@@ -10,10 +11,14 @@ def client(mock_dynamodb_tables):
     app.config['TESTING'] = True
     
     # Configurar variables de entorno para el mock
-    import os
     os.environ['AWS_ACCESS_KEY_ID'] = 'testing'
     os.environ['AWS_SECRET_ACCESS_KEY'] = 'testing'
     os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
+    
+    # Reemplazar la función get_dynamodb con el mock
+    import app as app_module
+    app_module.get_dynamodb = lambda: mock_dynamodb_tables
+    app_module.dynamodb = mock_dynamodb_tables
     
     with app.test_client() as client:
         yield client
