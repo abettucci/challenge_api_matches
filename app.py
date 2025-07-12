@@ -432,6 +432,29 @@ def get_all_pairs():
     }
 })
 def get_pair(pair_id):
+    """Obtener un par específico por ID"""
+    try:
+        pairs_table = dynamodb.Table(PAIRS_TABLE)
+        response = pairs_table.get_item(Key={'pair_id': pair_id})
+        
+        if 'Item' not in response:
+            return jsonify({
+                'status': 'error',
+                'message': 'Par de ítems no encontrado'
+            }), 404
+        
+        return jsonify({
+            'status': 'success',
+            'message': 'Par de ítems encontrado exitosamente',
+            'pair': response['Item']
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error en get_pair: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Error interno del servidor: {str(e)}'
+        }), 500
 
 @app.route('/ml/train', methods=['POST'])
 @swag_from({
@@ -536,29 +559,6 @@ def get_model_status():
         return jsonify({
             'status': 'error',
             'message': f'Error obteniendo estado del modelo: {str(e)}'
-        }), 500
-    """Obtener un par específico por ID"""
-    try:
-        pairs_table = dynamodb.Table(PAIRS_TABLE)
-        response = pairs_table.get_item(Key={'pair_id': pair_id})
-        
-        if 'Item' not in response:
-            return jsonify({
-                'status': 'error',
-                'message': 'Par de ítems no encontrado'
-            }), 404
-        
-        return jsonify({
-            'status': 'success',
-            'message': 'Par de ítems encontrado exitosamente',
-            'pair': response['Item']
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Error en get_pair: {e}")
-        return jsonify({
-            'status': 'error',
-            'message': f'Error interno del servidor: {str(e)}'
         }), 500
 
 if __name__ == '__main__':
