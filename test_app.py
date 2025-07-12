@@ -5,9 +5,16 @@ from moto import mock_aws
 from app import app, create_tables, calculate_similarity, generate_pair_id
 
 @pytest.fixture
-def client():
-    """Fixture para crear un cliente de prueba de Flask"""
+def client(mock_dynamodb_tables):
+    """Fixture para crear un cliente de prueba de Flask con DynamoDB mockeado"""
     app.config['TESTING'] = True
+    
+    # Configurar variables de entorno para el mock
+    import os
+    os.environ['AWS_ACCESS_KEY_ID'] = 'testing'
+    os.environ['AWS_SECRET_ACCESS_KEY'] = 'testing'
+    os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
+    
     with app.test_client() as client:
         yield client
 
@@ -15,6 +22,12 @@ def client():
 def mock_dynamodb_tables():
     """Fixture para crear tablas DynamoDB simuladas"""
     with mock_aws():
+        # Configurar variables de entorno para el mock
+        import os
+        os.environ['AWS_ACCESS_KEY_ID'] = 'testing'
+        os.environ['AWS_SECRET_ACCESS_KEY'] = 'testing'
+        os.environ['AWS_DEFAULT_REGION'] = 'us-east-1'
+        
         # Crear cliente DynamoDB simulado
         dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
         
@@ -50,12 +63,16 @@ def mock_dynamodb_tables():
             }
         )
         
+        # Esperar a que las tablas estén activas
+        pairs_table.meta.client.get_waiter('table_exists').wait(TableName='item_pairs')
+        items_table.meta.client.get_waiter('table_exists').wait(TableName='items')
+        
         yield dynamodb
 
 class TestHealthCheck:
     """Pruebas para el endpoint de salud"""
     
-    def test_health_check(self, client):
+    def test_health_check(self, client, mock_dynamodb_tables):
         """Prueba que el endpoint de salud funcione correctamente"""
         response = client.get('/health')
         data = json.loads(response.data)
@@ -118,7 +135,7 @@ class TestCompareItems:
         assert data['are_equal'] == True
         assert data['similarity_score'] == 1.0
     
-    def test_compare_items_missing_data(self, client):
+    def test_compare_items_missing_data(self, client, mock_dynamodb_tables):
         """Prueba error cuando faltan datos requeridos"""
         # Sin item_b
         payload = {
@@ -137,7 +154,7 @@ class TestCompareItems:
         assert data['status'] == 'error'
         assert 'item_a e item_b' in data['message']
     
-    def test_compare_items_invalid_structure(self, client):
+    def test_compare_items_invalid_structure(self, client, mock_dynamodb_tables):
         """Prueba error cuando la estructura de datos es inválida"""
         payload = {
             'item_a': {
@@ -219,7 +236,7 @@ class TestCreateItemPair:
         assert 'ya existe' in data2['message']
         assert data1['pair_id'] == data2['pair_id']
     
-    def test_create_item_pair_missing_data(self, client):
+    def test_create_item_pair_missing_data(self, client, mock_dynamodb_tables):
         """Prueba error cuando faltan datos requeridos"""
         payload = {
             'item_a': {
