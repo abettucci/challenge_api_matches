@@ -7,8 +7,8 @@ on:
     branches: [ main ]
 
 env:
-  AWS_REGION: us-east-2
-  PROJECT_NAME: meli_challenge_matches
+  AWS_REGION: us-east-1
+  PROJECT_NAME: meli-challenge
 
 jobs:
   test:
@@ -55,13 +55,10 @@ jobs:
       working-directory: ./terraform-simple
       run: terraform init
     
-    - name: Terraform Plan
+    - name: Create ECR Repository First
       working-directory: ./terraform-simple
-      run: terraform plan -out=tfplan
-    
-    - name: Terraform Apply
-      working-directory: ./terraform-simple
-      run: terraform apply -auto-approve tfplan
+      run: |
+        terraform apply -auto-approve -target=aws_ecr_repository.lambda
     
     - name: Get ECR Repository URL
       working-directory: ./terraform-simple
@@ -80,13 +77,23 @@ jobs:
       run: |
         docker build -f Dockerfile.lambda -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
     
-    - name: Update Lambda Function
+    - name: Verify ECR Image
       run: |
-        aws lambda update-function-code \
-          --function-name ${{ env.PROJECT_NAME }}-api \
-          --image-uri ${{ env.ECR_REPO_URL }}:latest \
+        echo "Verifying image exists in ECR..."
+        aws ecr describe-images \
+          --repository-name ${{ env.PROJECT_NAME }}-lambda \
+          --image-ids imageTag=latest \
           --region ${{ env.AWS_REGION }}
+    
+    - name: Terraform Plan
+      working-directory: ./terraform-simple
+      run: terraform plan -out=tfplan
+    
+    - name: Terraform Apply (Full Infrastructure)
+      working-directory: ./terraform-simple
+      run: terraform apply -auto-approve tfplan
     
     - name: Wait for Lambda update
       run: |

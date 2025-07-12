@@ -136,6 +136,9 @@ resource "aws_lambda_function" "api" {
   tags = {
     Name = "${var.project_name}-lambda-function"
   }
+
+  # Solo crear si la imagen existe
+  depends_on = [aws_ecr_repository.lambda]
 }
 
 # API Gateway
