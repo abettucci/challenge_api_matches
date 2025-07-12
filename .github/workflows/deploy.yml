@@ -115,6 +115,38 @@ jobs:
         # Limpiar archivos temporales
         rm -f Dockerfile.dummy lambda_function_dummy.py
     
+    - name: Import Existing Resources to Terraform State
+      working-directory: ./terraform-simple
+      run: |
+        echo "Importing existing AWS resources to Terraform state..."
+        
+        # Get AWS Account ID
+        ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+        echo "Using AWS Account ID: $ACCOUNT_ID"
+        
+        # Import DynamoDB table
+        echo "Importing DynamoDB table..."
+        terraform import aws_dynamodb_table.item_pairs item_pairs || echo "DynamoDB table already imported or doesn't exist"
+        
+        # Import ECR repository
+        echo "Importing ECR repository..."
+        terraform import aws_ecr_repository.lambda meli-challenge-lambda || echo "ECR repository already imported or doesn't exist"
+        
+        # Import IAM role
+        echo "Importing IAM role..."
+        terraform import aws_iam_role.lambda_role meli-challenge-lambda-role || echo "IAM role already imported or doesn't exist"
+        
+        # Import IAM policies
+        echo "Importing IAM policies..."
+        terraform import aws_iam_policy.lambda_logging arn:aws:iam::${ACCOUNT_ID}:policy/meli-challenge-lambda-logging || echo "IAM logging policy already imported or doesn't exist"
+        terraform import aws_iam_policy.dynamodb_access arn:aws:iam::${ACCOUNT_ID}:policy/meli-challenge-dynamodb-access || echo "IAM DynamoDB policy already imported or doesn't exist"
+        
+        # Import Lambda function if it exists
+        echo "Importing Lambda function..."
+        terraform import aws_lambda_function.api meli-challenge-api || echo "Lambda function already imported or doesn't exist"
+        
+        echo "Import completed!"
+    
     - name: Terraform Plan
       working-directory: ./terraform-simple
       run: terraform plan -out=tfplan
