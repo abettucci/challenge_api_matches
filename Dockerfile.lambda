@@ -1,0 +1,11 @@
+FROM public.ecr.aws/lambda/python:3.9
+
+# Copiar requirements e instalar dependencias
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Copiar código de la aplicación
+COPY lambda_app.py .
+
+# Comando por defecto para Lambda
+CMD ["lambda_app.lambda_handler"] 
