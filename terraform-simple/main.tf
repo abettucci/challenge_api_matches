@@ -137,8 +137,10 @@ resource "aws_lambda_function" "api" {
     Name = "${var.project_name}-lambda-function"
   }
 
-  # Solo crear si la imagen existe
-  depends_on = [aws_ecr_repository.lambda]
+  # Ignorar cambios en image_uri para permitir actualizaciones manuales
+  lifecycle {
+    ignore_changes = [image_uri]
+  }
 }
 
 # API Gateway

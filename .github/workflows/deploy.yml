@@ -55,37 +55,45 @@ jobs:
       working-directory: ./terraform-simple
       run: terraform init
     
-    - name: Create ECR Repository First
-      working-directory: ./terraform-simple
-      run: |
-        terraform apply -auto-approve -target=aws_ecr_repository.lambda
-    
     - name: Get ECR Repository URL
       working-directory: ./terraform-simple
       run: |
+        # Obtener la URL del repositorio ECR (creado o existente)
         echo "ECR_REPO_URL=$(terraform output -raw ecr_repository_url)" >> $GITHUB_ENV
     
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
     
-    - name: Build, tag, and push image to Amazon ECR
+    - name: Create Dummy Image for Initial Deployment
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         ECR_REPOSITORY: ${{ env.PROJECT_NAME }}-lambda
-        IMAGE_TAG: latest
       run: |
-        docker build -f Dockerfile.lambda -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-        echo "Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-    
-    - name: Verify ECR Image
-      run: |
-        echo "Verifying image exists in ECR..."
-        aws ecr describe-images \
-          --repository-name ${{ env.PROJECT_NAME }}-lambda \
-          --image-ids imageTag=latest \
-          --region ${{ env.AWS_REGION }}
+        echo "Creating dummy image for initial Lambda creation..."
+        # Crear un Dockerfile temporal simple
+        cat > Dockerfile.dummy << 'EOF'
+        FROM public.ecr.aws/lambda/python:3.9
+        COPY <<EOF /var/task/lambda_function.py
+        def lambda_handler(event, context):
+            return {
+                'statusCode': 200,
+                'body': '{"message": "Dummy function - will be replaced"}'
+            }
+        EOF
+        CMD ["lambda_function.lambda_handler"]
+        EOF
+        
+        # Construir y subir imagen dummy
+        docker build -f Dockerfile.dummy -t $ECR_REGISTRY/$ECR_REPOSITORY:dummy .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:dummy
+        
+        # Taggear como latest también
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:dummy $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        
+        # Limpiar
+        rm -f Dockerfile.dummy
     
     - name: Terraform Plan
       working-directory: ./terraform-simple
@@ -94,6 +102,25 @@ jobs:
     - name: Terraform Apply (Full Infrastructure)
       working-directory: ./terraform-simple
       run: terraform apply -auto-approve tfplan
+    
+    - name: Build and Push Real Application Image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: ${{ env.PROJECT_NAME }}-lambda
+        IMAGE_TAG: latest
+      run: |
+        echo "Building and pushing real application image..."
+        docker build -f Dockerfile.lambda -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "Real image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+    
+    - name: Update Lambda Function Code
+      run: |
+        echo "Updating Lambda function with real image..."
+        aws lambda update-function-code \
+          --function-name ${{ env.PROJECT_NAME }}-api \
+          --image-uri ${{ env.ECR_REPO_URL }}:latest \
+          --region ${{ env.AWS_REGION }}
     
     - name: Wait for Lambda update
       run: |
