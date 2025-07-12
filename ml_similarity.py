@@ -150,7 +150,6 @@ class MLSimilarityDetector:
             self.model.fit(
                 X_train_scaled, y_train,
                 eval_set=[(X_val_scaled, y_val)],
-                early_stopping_rounds=10,
                 verbose=False
             )
         else:
