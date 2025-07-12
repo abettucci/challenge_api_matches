@@ -155,6 +155,16 @@ jobs:
       working-directory: ./terraform-simple
       run: terraform apply -auto-approve tfplan
     
+    - name: Install ML Dependencies
+      run: |
+        echo "Installing ML dependencies..."
+        pip install pandas xgboost joblib scikit-learn
+    
+    - name: Verify ML Dependencies
+      run: |
+        echo "Verifying ML dependencies..."
+        python -c "import pandas, xgboost, joblib, sklearn; print('✅ All ML dependencies installed successfully')"
+    
     - name: Prepare ML Model
       run: |
         echo "Preparing ML model for deployment..."

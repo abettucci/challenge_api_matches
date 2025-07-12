@@ -4,7 +4,33 @@ Script para preparar el modelo de ML para despliegue
 
 import os
 import shutil
-from train_ml_model import main as train_model
+import sys
+
+def check_dependencies():
+    """Verificar que las dependencias de ML estén instaladas"""
+    required_packages = ['pandas', 'xgboost', 'joblib', 'sklearn']
+    missing_packages = []
+    
+    for package in required_packages:
+        try:
+            __import__(package)
+        except ImportError:
+            missing_packages.append(package)
+    
+    if missing_packages:
+        print(f"❌ Faltan dependencias: {', '.join(missing_packages)}")
+        print("💡 Ejecuta: pip install pandas xgboost joblib scikit-learn")
+        return False
+    
+    print("✅ Todas las dependencias están instaladas")
+    return True
+
+try:
+    from train_ml_model import main as train_model
+except ImportError as e:
+    print(f"❌ Error importando train_ml_model: {e}")
+    print("💡 Asegúrate de que todas las dependencias estén instaladas")
+    sys.exit(1)
 
 def prepare_model_for_deployment():
     """Preparar el modelo para despliegue"""
@@ -53,10 +79,16 @@ def copy_model_to_lambda():
 if __name__ == "__main__":
     print("🎯 Preparando modelo de Machine Learning...")
     
+    # Verificar dependencias primero
+    if not check_dependencies():
+        print("💥 No se pueden preparar las dependencias")
+        sys.exit(1)
+    
     # Preparar modelo
     if prepare_model_for_deployment():
         # Copiar para Lambda
         copy_model_to_lambda()
         print("🎉 Modelo preparado exitosamente para despliegue!")
     else:
-        print("💥 Error preparando modelo") 
+        print("💥 Error preparando modelo")
+        sys.exit(1) 
