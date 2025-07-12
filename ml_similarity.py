@@ -90,13 +90,29 @@ class MLSimilarityDetector:
         for pair in training_data:
             all_titles.extend([pair.get('item_a_title', ''), pair.get('item_b_title', '')])
         
+        # Verificar que tenemos títulos válidos
+        valid_titles = [title for title in all_titles if title and title.strip()]
+        if not valid_titles:
+            raise ValueError("No hay títulos válidos para entrenar el vectorizer TF-IDF")
+        
+        logger.info(f"Entrenando TF-IDF con {len(valid_titles)} títulos únicos")
+        logger.info(f"Ejemplos de títulos: {valid_titles[:3]}")
+        
         self.tfidf_vectorizer = TfidfVectorizer(
             analyzer='word',
             ngram_range=(1, 2),
             max_features=1000,
-            min_df=2
+            min_df=1,  # Cambiar de 2 a 1 para permitir palabras que aparecen solo una vez
+            stop_words=None  # No usar stop words para evitar vocabulario vacío
         )
-        self.tfidf_vectorizer.fit(all_titles)
+        
+        try:
+            self.tfidf_vectorizer.fit(valid_titles)
+            logger.info(f"TF-IDF vectorizer entrenado con vocabulario de {len(self.tfidf_vectorizer.vocabulary_)} palabras")
+        except Exception as e:
+            logger.error(f"Error entrenando TF-IDF vectorizer: {e}")
+            logger.error(f"Títulos de ejemplo: {valid_titles[:5]}")
+            raise
         
         # Recalcular características con TF-IDF entrenado
         X_train, y_train = self.prepare_training_data(training_data)
@@ -173,7 +189,7 @@ class MLSimilarityDetector:
                 'confidence': 1.0
             }
         
-        vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 2))
+        vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 2), stop_words=None)
         tfidf_matrix = vectorizer.fit_transform([title1_norm, title2_norm])
         similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
         

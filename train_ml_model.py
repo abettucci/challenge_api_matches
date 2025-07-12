@@ -35,25 +35,32 @@ def load_training_data_from_csv(csv_path: str) -> List[Dict]:
 def create_synthetic_training_data() -> List[Dict]:
     """Crear datos de entrenamiento sintéticos para pruebas"""
     training_data = [
-        # Pares similares (is_similar = 1)
-        {'item_a_title': 'Telefono movil Samsung', 'item_b_title': 'Telefono celular Samsung', 'is_similar': 1},
-        {'item_a_title': 'Laptop HP 15 pulgadas', 'item_b_title': 'Notebook HP 15 inch', 'is_similar': 1},
-        {'item_a_title': 'Auriculares bluetooth Sony', 'item_b_title': 'Audifonos bluetooth Sony', 'is_similar': 1},
-        {'item_a_title': 'Camara digital Canon', 'item_b_title': 'Camara fotografica Canon', 'is_similar': 1},
-        {'item_a_title': 'Tablet iPad 10 pulgadas', 'item_b_title': 'iPad 10 inch tablet', 'is_similar': 1},
-        {'item_a_title': 'Smartwatch Apple Watch', 'item_b_title': 'Reloj inteligente Apple', 'is_similar': 1},
-        {'item_a_title': 'Teclado mecanico RGB', 'item_b_title': 'Teclado gaming RGB', 'is_similar': 1},
-        {'item_a_title': 'Mouse inalambrico Logitech', 'item_b_title': 'Mouse wireless Logitech', 'is_similar': 1},
+        # Pares similares (is_similar = 1) - Más diversidad de vocabulario
+        {'item_a_title': 'Telefono movil Samsung Galaxy', 'item_b_title': 'Telefono celular Samsung Galaxy', 'is_similar': 1},
+        {'item_a_title': 'Laptop HP Pavilion 15 pulgadas', 'item_b_title': 'Notebook HP Pavilion 15 inch', 'is_similar': 1},
+        {'item_a_title': 'Auriculares bluetooth Sony WH1000', 'item_b_title': 'Audifonos bluetooth Sony WH1000', 'is_similar': 1},
+        {'item_a_title': 'Camara digital Canon EOS Rebel', 'item_b_title': 'Camara fotografica Canon EOS Rebel', 'is_similar': 1},
+        {'item_a_title': 'Tablet iPad Pro 10 pulgadas', 'item_b_title': 'iPad Pro 10 inch tablet', 'is_similar': 1},
+        {'item_a_title': 'Smartwatch Apple Watch Series', 'item_b_title': 'Reloj inteligente Apple Watch Series', 'is_similar': 1},
+        {'item_a_title': 'Teclado mecanico RGB Corsair', 'item_b_title': 'Teclado gaming RGB Corsair', 'is_similar': 1},
+        {'item_a_title': 'Mouse inalambrico Logitech MX', 'item_b_title': 'Mouse wireless Logitech MX', 'is_similar': 1},
+        {'item_a_title': 'Monitor LG 27 pulgadas 4K', 'item_b_title': 'Pantalla LG 27 inch 4K', 'is_similar': 1},
+        {'item_a_title': 'Impresora HP LaserJet Pro', 'item_b_title': 'Impresora laser HP LaserJet Pro', 'is_similar': 1},
+        {'item_a_title': 'Disco duro externo Seagate 1TB', 'item_b_title': 'HDD externo Seagate 1TB', 'is_similar': 1},
+        {'item_a_title': 'Memoria RAM DDR4 16GB', 'item_b_title': 'RAM DDR4 16GB memoria', 'is_similar': 1},
         
-        # Pares diferentes (is_similar = 0)
-        {'item_a_title': 'Telefono movil Samsung', 'item_b_title': 'Laptop HP 15 pulgadas', 'is_similar': 0},
-        {'item_a_title': 'Auriculares bluetooth Sony', 'item_b_title': 'Camara digital Canon', 'is_similar': 0},
-        {'item_a_title': 'Tablet iPad 10 pulgadas', 'item_b_title': 'Teclado mecanico RGB', 'is_similar': 0},
-        {'item_a_title': 'Smartwatch Apple Watch', 'item_b_title': 'Mouse inalambrico Logitech', 'is_similar': 0},
-        {'item_a_title': 'Telefono movil Samsung', 'item_b_title': 'Auriculares bluetooth Sony', 'is_similar': 0},
-        {'item_a_title': 'Laptop HP 15 pulgadas', 'item_b_title': 'Tablet iPad 10 pulgadas', 'is_similar': 0},
-        {'item_a_title': 'Camara digital Canon', 'item_b_title': 'Smartwatch Apple Watch', 'is_similar': 0},
-        {'item_a_title': 'Teclado mecanico RGB', 'item_b_title': 'Mouse inalambrico Logitech', 'is_similar': 0},
+        # Pares diferentes (is_similar = 0) - Más diversidad
+        {'item_a_title': 'Telefono movil Samsung Galaxy', 'item_b_title': 'Laptop HP Pavilion 15 pulgadas', 'is_similar': 0},
+        {'item_a_title': 'Auriculares bluetooth Sony WH1000', 'item_b_title': 'Camara digital Canon EOS Rebel', 'is_similar': 0},
+        {'item_a_title': 'Tablet iPad Pro 10 pulgadas', 'item_b_title': 'Teclado mecanico RGB Corsair', 'is_similar': 0},
+        {'item_a_title': 'Smartwatch Apple Watch Series', 'item_b_title': 'Mouse inalambrico Logitech MX', 'is_similar': 0},
+        {'item_a_title': 'Monitor LG 27 pulgadas 4K', 'item_b_title': 'Impresora HP LaserJet Pro', 'is_similar': 0},
+        {'item_a_title': 'Disco duro externo Seagate 1TB', 'item_b_title': 'Memoria RAM DDR4 16GB', 'is_similar': 0},
+        {'item_a_title': 'Telefono movil Samsung Galaxy', 'item_b_title': 'Auriculares bluetooth Sony WH1000', 'is_similar': 0},
+        {'item_a_title': 'Laptop HP Pavilion 15 pulgadas', 'item_b_title': 'Tablet iPad Pro 10 pulgadas', 'is_similar': 0},
+        {'item_a_title': 'Camara digital Canon EOS Rebel', 'item_b_title': 'Smartwatch Apple Watch Series', 'is_similar': 0},
+        {'item_a_title': 'Teclado mecanico RGB Corsair', 'item_b_title': 'Mouse inalambrico Logitech MX', 'is_similar': 0},
+        {'item_a_title': 'Monitor LG 27 pulgadas 4K', 'item_b_title': 'Disco duro externo Seagate 1TB', 'is_similar': 0},
     ]
     
     logger.info(f"Creados {len(training_data)} pares sintéticos de entrenamiento")
