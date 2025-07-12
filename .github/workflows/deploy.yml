@@ -115,6 +115,32 @@ jobs:
         # Limpiar archivos temporales
         rm -f Dockerfile.dummy lambda_function_dummy.py
     
+    - name: Clean Up Existing Lambda Permissions
+      run: |
+        echo "Cleaning up existing Lambda permissions to avoid conflicts..."
+        
+        # List all permissions for the Lambda function
+        PERMISSIONS=$(aws lambda get-policy --function-name meli-challenge-api --region ${AWS_REGION} --query 'Policy' --output text 2>/dev/null || echo "")
+        
+        if [ ! -z "$PERMISSIONS" ]; then
+          echo "Found existing permissions, parsing and removing them..."
+          
+          # Extract statement IDs from the policy
+          STATEMENT_IDS=$(echo "$PERMISSIONS" | jq -r '.Statement[].Sid' 2>/dev/null || echo "")
+          
+          for SID in $STATEMENT_IDS; do
+            if [ ! -z "$SID" ]; then
+              echo "Removing permission with statement ID: $SID"
+              aws lambda remove-permission \
+                --function-name meli-challenge-api \
+                --statement-id "$SID" \
+                --region ${AWS_REGION} || echo "Failed to remove permission $SID"
+            fi
+          done
+        else
+          echo "No existing permissions found or function doesn't exist yet"
+        fi
+    
     - name: Import Existing Resources to Terraform State
       working-directory: ./terraform-simple
       run: |
@@ -145,10 +171,6 @@ jobs:
         echo "Importing Lambda function..."
         terraform import aws_lambda_function.api meli-challenge-api || echo "Lambda function already imported or doesn't exist"
         
-        # Import Lambda permission if it exists
-        echo "Importing Lambda permission..."
-        terraform import aws_lambda_permission.api_gateway meli-challenge-api:AllowExecutionFromAPIGateway || echo "Lambda permission already imported or doesn't exist"
-        
         echo "Import completed!"
     
     - name: Terraform Plan
@@ -158,22 +180,38 @@ jobs:
     - name: Terraform Apply (Full Infrastructure)
       working-directory: ./terraform-simple
       run: |
-        # Aplicar Terraform con manejo de errores
+        # Aplicar Terraform con manejo de errores robusto
         terraform apply -auto-approve tfplan || {
           echo "Terraform apply failed, checking for specific errors..."
           
-          # Si falla por Lambda Permission, intentar eliminarlo y recrearlo
-          if terraform apply -auto-approve tfplan 2>&1 | grep -q "ResourceConflictException.*AllowExecutionFromAPIGateway"; then
+          # Capturar el output completo del error
+          ERROR_OUTPUT=$(terraform apply -auto-approve tfplan 2>&1 || true)
+          echo "Error output: $ERROR_OUTPUT"
+          
+          # Si falla por Lambda Permission conflict
+          if echo "$ERROR_OUTPUT" | grep -q "ResourceConflictException.*AllowExecutionFromAPIGateway"; then
             echo "Lambda Permission conflict detected, removing existing permission..."
             aws lambda remove-permission \
               --function-name meli-challenge-api \
               --statement-id AllowExecutionFromAPIGateway \
               --region ${AWS_REGION} || echo "Permission removal failed or permission doesn't exist"
             
+            echo "Retrying Terraform apply after permission removal..."
+            terraform apply -auto-approve tfplan
+          # Si falla por otros errores de permisos
+          elif echo "$ERROR_OUTPUT" | grep -q "ResourceConflictException"; then
+            echo "Other permission conflict detected, attempting to clean up..."
+            # Intentar eliminar todos los permisos existentes
+            aws lambda remove-permission \
+              --function-name meli-challenge-api \
+              --statement-id AllowExecutionFromAPIGateway \
+              --region ${AWS_REGION} || echo "Permission removal failed"
+            
             echo "Retrying Terraform apply..."
             terraform apply -auto-approve tfplan
           else
             echo "Unknown error, exiting..."
+            echo "$ERROR_OUTPUT"
             exit 1
           fi
         }
