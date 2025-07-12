@@ -145,6 +145,10 @@ jobs:
         echo "Importing Lambda function..."
         terraform import aws_lambda_function.api meli-challenge-api || echo "Lambda function already imported or doesn't exist"
         
+        # Import Lambda permission if it exists
+        echo "Importing Lambda permission..."
+        terraform import aws_lambda_permission.api_gateway meli-challenge-api:AllowExecutionFromAPIGateway || echo "Lambda permission already imported or doesn't exist"
+        
         echo "Import completed!"
     
     - name: Terraform Plan
@@ -153,7 +157,26 @@ jobs:
     
     - name: Terraform Apply (Full Infrastructure)
       working-directory: ./terraform-simple
-      run: terraform apply -auto-approve tfplan
+      run: |
+        # Aplicar Terraform con manejo de errores
+        terraform apply -auto-approve tfplan || {
+          echo "Terraform apply failed, checking for specific errors..."
+          
+          # Si falla por Lambda Permission, intentar eliminarlo y recrearlo
+          if terraform apply -auto-approve tfplan 2>&1 | grep -q "ResourceConflictException.*AllowExecutionFromAPIGateway"; then
+            echo "Lambda Permission conflict detected, removing existing permission..."
+            aws lambda remove-permission \
+              --function-name meli-challenge-api \
+              --statement-id AllowExecutionFromAPIGateway \
+              --region ${AWS_REGION} || echo "Permission removal failed or permission doesn't exist"
+            
+            echo "Retrying Terraform apply..."
+            terraform apply -auto-approve tfplan
+          else
+            echo "Unknown error, exiting..."
+            exit 1
+          fi
+        }
     
     - name: Install ML Dependencies
       run: |

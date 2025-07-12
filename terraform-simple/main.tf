@@ -286,6 +286,18 @@ resource "aws_lambda_permission" "api_gateway" {
   function_name = aws_lambda_function.api.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
+  
+  # Ignorar cambios para evitar conflictos
+  lifecycle {
+    ignore_changes = [statement_id]
+  }
+}
+
+# API Gateway Stage
+resource "aws_api_gateway_stage" "prod" {
+  deployment_id = aws_api_gateway_deployment.api.id
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  stage_name    = "prod"
 }
 
 # API Gateway Deployment
@@ -299,18 +311,17 @@ resource "aws_api_gateway_deployment" "api" {
   ]
 
   rest_api_id = aws_api_gateway_rest_api.api.id
-  stage_name  = "prod"
 }
 
 # Outputs
 output "api_url" {
   description = "URL of the API"
-  value       = "${aws_api_gateway_deployment.api.invoke_url}"
+  value       = "${aws_api_gateway_stage.prod.invoke_url}"
 }
 
 output "health_url" {
   description = "URL of the health endpoint"
-  value       = "${aws_api_gateway_deployment.api.invoke_url}/health"
+  value       = "${aws_api_gateway_stage.prod.invoke_url}/health"
 }
 
 output "ecr_repository_url" {
