@@ -78,7 +78,8 @@ resource "aws_iam_policy" "dynamodb_access" {
           "dynamodb:Scan",
           "dynamodb:Query",
           "dynamodb:BatchGetItem",
-          "dynamodb:BatchWriteItem"
+          "dynamodb:BatchWriteItem",
+          "dynamodb:DescribeTable"
         ]
         Resource = aws_dynamodb_table.item_pairs.arn
       }
