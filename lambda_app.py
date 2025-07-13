@@ -15,24 +15,32 @@ dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 PAIRS_TABLE = 'item_pairs'
 
 def calculate_similarity(title1: str, title2: str) -> float:
-    """Calcular similitud entre dos títulos usando similitud de Jaccard"""
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.metrics.pairwise import cosine_similarity
-    
-    # Normalizar títulos
-    title1_norm = title1.lower().strip()
-    title2_norm = title2.lower().strip()
-    
-    # Si son exactamente iguales
-    if title1_norm == title2_norm:
-        return 1.0
-    
-    # Calcular similitud usando TF-IDF y cosine similarity
-    vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 2))
-    tfidf_matrix = vectorizer.fit_transform([title1_norm, title2_norm])
-    similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-    
-    return float(similarity)
+    """Calcular similitud entre dos títulos usando ML model o fallback a TF-IDF"""
+    try:
+        # Intentar usar el modelo ML si está disponible
+        from ml_similarity import get_ml_similarity
+        result = get_ml_similarity(title1, title2)
+        return result['similarity_score']
+    except Exception as e:
+        logger.warning(f"ML model not available, using fallback: {e}")
+        # Fallback a similitud básica usando TF-IDF
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.metrics.pairwise import cosine_similarity
+        
+        # Normalizar títulos
+        title1_norm = title1.lower().strip()
+        title2_norm = title2.lower().strip()
+        
+        # Si son exactamente iguales
+        if title1_norm == title2_norm:
+            return 1.0
+        
+        # Calcular similitud usando TF-IDF y cosine similarity
+        vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 2), stop_words=None)
+        tfidf_matrix = vectorizer.fit_transform([title1_norm, title2_norm])
+        similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+        
+        return float(similarity)
 
 def generate_pair_id(item_a: int, item_b: int) -> str:
     """Generar ID único para un par de ítems"""
@@ -90,12 +98,36 @@ def lambda_handler(event, context):
 
 def health_check():
     """Endpoint de salud de la API"""
-    return create_response(200, {
-        'status': 'success',
-        'message': 'API de Ítems Similares funcionando correctamente en AWS Lambda',
-        'timestamp': datetime.now().isoformat(),
-        'environment': 'aws-lambda'
-    })
+    try:
+        # Verificar que DynamoDB está accesible
+        pairs_table = dynamodb.Table(PAIRS_TABLE)
+        pairs_table.table_status
+        
+        # Verificar que las dependencias de ML están disponibles
+        try:
+            import sklearn
+            import xgboost
+            import pandas
+            ml_status = "available"
+        except ImportError as e:
+            ml_status = f"missing: {str(e)}"
+        
+        return create_response(200, {
+            'status': 'success',
+            'message': 'API de Ítems Similares funcionando correctamente en AWS Lambda',
+            'timestamp': datetime.now().isoformat(),
+            'environment': 'aws-lambda',
+            'dynamodb_status': 'connected',
+            'ml_dependencies': ml_status
+        })
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return create_response(500, {
+            'status': 'error',
+            'message': f'Health check failed: {str(e)}',
+            'timestamp': datetime.now().isoformat(),
+            'environment': 'aws-lambda'
+        })
 
 def compare_items(event):
     """Comparar dos ítems y determinar si son iguales, similares o si ya existe el par"""

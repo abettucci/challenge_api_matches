@@ -11,9 +11,8 @@ COPY lambda_handler.py .
 # Copiar módulo de ML
 COPY ml_similarity.py .
 
-# Crear directorio para modelos y copiar modelo entrenado
+# Crear directorio para modelos
 RUN mkdir -p models
-COPY models/similarity_model.pkl models/
 
 # Comando por defecto para Lambda
 CMD ["lambda_handler.lambda_handler"] 
