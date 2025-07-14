@@ -113,10 +113,10 @@ La tabla `item_pairs` usa la estructura correcta según la consigna:
 | **Flask**  | GET    | `/items/pairs/<pair_id>`                 | Obtener un par por ID              | `curl http://localhost:5000/items/pairs/1_2`                                  |
 | **Flask**  | POST   | `/items/compare`                         | Comparar dos ítems                 | `curl -X POST http://localhost:5000/items/compare -H "Content-Type: application/json" -d '{"item_a": {"item_id": 1, "title": "A"}, "item_b": {"item_id": 2, "title": "B"}}'` |
 | **Flask**  | POST   | `/items/pairs`                           | Crear un par de ítems              | `curl -X POST http://localhost:5000/items/pairs -H "Content-Type: application/json" -d '{"item_a": {"item_id": 1, "title": "A"}, "item_b": {"item_id": 2, "title": "B"}}'` |
-| **Lambda** | GET    | `/items/pairs`                           | Listar todos los pares             | `curl https://<api-id>.execute-api.<region>.amazonaws.com/prod/items/pairs`   |
-| **Lambda** | GET    | `/items/pairs/<pair_id>`                 | Obtener un par por ID              | `curl https://<api-id>.execute-api.<region>.amazonaws.com/prod/items/pairs/1_2` |
-| **Lambda** | POST   | `/items/compare`                         | Comparar dos ítems                 | `curl -X POST https://<api-id>.execute-api.<region>.amazonaws.com/prod/items/compare -H "Content-Type: application/json" -d '{"item_a": {"item_id": 1, "title": "A"}, "item_b": {"item_id": 2, "title": "B"}}'` |
-| **Lambda** | POST   | `/items/pairs`                           | Crear un par de ítems              | `curl -X POST https://<api-id>.execute-api.<region>.amazonaws.com/prod/items/pairs -H "Content-Type: application/json" -d '{"item_a": {"item_id": 1, "title": "A"}, "item_b": {"item_id": 2, "title": "B"}}'` |
+| **Lambda** | GET    | `/items/pairs`                           | Listar todos los pares             | `curl https://l0yps62grk.execute-api.us-east-1.amazonaws.com/prod/items/pairs`   |
+| **Lambda** | GET    | `/items/pairs/<pair_id>`                 | Obtener un par por ID              | `curl https://l0yps62grk.execute-api.us-east-1.amazonaws.com/prod/items/pairs/1_2` |
+| **Lambda** | POST   | `/items/compare`                         | Comparar dos ítems                 | `curl -X POST https://l0yps62grk.execute-api.us-east-1.amazonaws.com/prod/items/compare -H "Content-Type: application/json" -d '{"item_a": {"item_id": 1, "title": "A"}, "item_b": {"item_id": 2, "title": "B"}}'` |
+| **Lambda** | POST   | `/items/pairs`                           | Crear un par de ítems              | `curl -X POST https://l0yps62grk.execute-api.us-east-1.amazonaws.com/prod/items/pairs -H "Content-Type: application/json" -d '{"item_a": {"item_id": 1, "title": "A"}, "item_b": {"item_id": 2, "title": "B"}}'` |
 
 ## 📚 Documentación de la API
 

@@ -95,10 +95,10 @@ def create_tables():
         pairs_table = dynamodb.create_table(
             TableName=PAIRS_TABLE,
             KeySchema=[
-                {'AttributeName': 'pair_id', 'KeyType': 'HASH'}
+                {'AttributeName': 'id', 'KeyType': 'HASH'}
             ],
             AttributeDefinitions=[
-                {'AttributeName': 'pair_id', 'AttributeType': 'S'}
+                {'AttributeName': 'id', 'AttributeType': 'S'}
             ],
             ProvisionedThroughput={
                 'ReadCapacityUnits': 5,
@@ -261,7 +261,7 @@ def compare_items():
         pairs_table = dynamodb.Table(PAIRS_TABLE)
         
         try:
-            response = pairs_table.get_item(Key={'pair_id': pair_id})
+            response = pairs_table.get_item(Key={'id': pair_id})
             pair_exists = 'Item' in response
         except Exception as e:
             logger.error(f"Error verificando par existente: {e}")
@@ -359,7 +359,7 @@ def create_item_pair():
         pairs_table = dynamodb.Table(PAIRS_TABLE)
         
         try:
-            response = pairs_table.get_item(Key={'pair_id': pair_id})
+            response = pairs_table.get_item(Key={'id': pair_id})
             if 'Item' in response:
                 return jsonify({
                     'status': 'success',
@@ -372,7 +372,7 @@ def create_item_pair():
         
         # Crear el nuevo par
         pair_data = {
-            'pair_id': pair_id,
+            'id': pair_id,
             'item_a_id': item_a['item_id'],
             'item_a_title': item_a['title'],
             'item_b_id': item_b['item_id'],
@@ -449,7 +449,7 @@ def get_pair(pair_id):
     """Obtener un par específico por ID"""
     try:
         pairs_table = dynamodb.Table(PAIRS_TABLE)
-        response = pairs_table.get_item(Key={'pair_id': pair_id})
+        response = pairs_table.get_item(Key={'id': pair_id})
         
         if 'Item' not in response:
             return jsonify({

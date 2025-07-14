@@ -166,7 +166,7 @@ def compare_items(event):
         pairs_table = dynamodb.Table(PAIRS_TABLE)
         
         try:
-            response = pairs_table.get_item(Key={'pair_id': pair_id})
+            response = pairs_table.get_item(Key={'id': pair_id})
             pair_exists = 'Item' in response
         except Exception as e:
             logger.error(f"Error verificando par existente: {e}")
@@ -176,7 +176,6 @@ def compare_items(event):
             'status': 'success',
             'message': 'Comparación completada exitosamente',
             'similarity_score': similarity_score,
-            'are_equal': are_equal,
             'are_similar': are_similar,
             'pair_exists': pair_exists,
             'pair_id': pair_id
@@ -221,7 +220,7 @@ def create_item_pair(event):
         pairs_table = dynamodb.Table(PAIRS_TABLE)
         
         try:
-            response = pairs_table.get_item(Key={'pair_id': pair_id})
+            response = pairs_table.get_item(Key={'id': pair_id})
             pair_exists = 'Item' in response
             existing_item = response.get('Item', {}) if pair_exists else {}
             existing_status = existing_item.get('status', '') if pair_exists else ''
@@ -268,7 +267,7 @@ def create_item_pair(event):
         
         if should_update:
             pair_data = {
-                'pair_id': pair_id,
+                'id': pair_id,
                 'item_a_id': item_a['item_id'],
                 'item_a_title': item_a['title'],
                 'item_b_id': item_b['item_id'],
@@ -333,7 +332,7 @@ def get_pair(pair_id):
     """Obtener un par específico por ID"""
     try:
         pairs_table = dynamodb.Table(PAIRS_TABLE)
-        response = pairs_table.get_item(Key={'pair_id': pair_id})
+        response = pairs_table.get_item(Key={'id': pair_id})
         
         if 'Item' not in response:
             return create_response(404, {
