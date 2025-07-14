@@ -575,9 +575,49 @@ def get_model_status():
             'message': f'Error obteniendo estado del modelo: {str(e)}'
         }), 500
 
-if __name__ == '__main__':
-    # Crear tablas al iniciar
-    create_tables()
-    
-    # Ejecutar la aplicación
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+@app.route('/items/pairs/<pair_id>', methods=['DELETE'])
+def delete_pair(pair_id):
+    try:
+        pairs_table = dynamodb.Table(PAIRS_TABLE)
+        pairs_table.delete_item(Key={'id': pair_id})
+        return jsonify({
+            'status': 'success',
+            'message': f'Par con id {pair_id} eliminado exitosamente'
+        }), 200
+    except Exception as e:
+        logger.error(f"Error eliminando par: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Error eliminando par: {str(e)}'
+        }), 500
+
+@app.route('/items/pairs/<pair_id>', methods=['PUT'])
+def update_pair(pair_id):
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'status': 'error', 'message': 'No se enviaron datos para actualizar'}), 400
+        pairs_table = dynamodb.Table(PAIRS_TABLE)
+        update_expr = []
+        expr_attr_vals = {}
+        for k, v in data.items():
+            update_expr.append(f"{k} = :{k}")
+            expr_attr_vals[f":{k}"] = v
+        update_expression = "set " + ", ".join(update_expr)
+        pairs_table.update_item(
+            Key={'id': pair_id},
+            UpdateExpression=update_expression,
+            ExpressionAttributeValues=expr_attr_vals
+        )
+        return jsonify({'status': 'success', 'message': f'Par con id {pair_id} actualizado exitosamente'}), 200
+    except Exception as e:
+        logger.error(f"Error actualizando par: {e}")
+        return jsonify({'status': 'error', 'message': f'Error actualizando par: {str(e)}'}), 500
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "create_tables":
+        create_tables()
+        print("Tablas de DynamoDB creadas o ya existentes.")
+    else:
+        app.run(host="0.0.0.0", port=5000, debug=True) 

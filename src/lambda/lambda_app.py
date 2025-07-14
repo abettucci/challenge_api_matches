@@ -83,6 +83,10 @@ def lambda_handler(event, context):
         elif http_method == 'GET' and path.startswith('/items/pairs/'):
             pair_id = path.split('/')[-1]
             return get_pair(pair_id)
+        elif http_method == 'PUT' and path.startswith('/items/pairs/'):
+            return update_pair(event)
+        elif http_method == 'DELETE' and path.startswith('/items/pairs/'):
+            return delete_pair(event)
         else:
             return create_response(404, {
                 'status': 'error',
@@ -352,3 +356,40 @@ def get_pair(pair_id):
             'status': 'error',
             'message': f'Error interno del servidor: {str(e)}'
         }) 
+
+def update_pair(event, context=None):
+    """Actualizar campos de un par existente por id"""
+    pair_id = event.get('pathParameters', {}).get('pair_id')
+    body = json.loads(event.get('body', '{}'))
+    if not pair_id or not body:
+        return create_response(400, {'status': 'error', 'message': 'Faltan datos para actualizar'})
+    try:
+        pairs_table = dynamodb.Table(PAIRS_TABLE)
+        update_expr = []
+        expr_attr_vals = {}
+        for k, v in body.items():
+            update_expr.append(f"{k} = :{k}")
+            expr_attr_vals[f":{k}"] = v
+        update_expression = "set " + ", ".join(update_expr)
+        pairs_table.update_item(
+            Key={'id': pair_id},
+            UpdateExpression=update_expression,
+            ExpressionAttributeValues=expr_attr_vals
+        )
+        return create_response(200, {'status': 'success', 'message': f'Par con id {pair_id} actualizado exitosamente'})
+    except Exception as e:
+        logger.error(f"Error actualizando par: {e}")
+        return create_response(500, {'status': 'error', 'message': f'Error actualizando par: {str(e)}'})
+
+def delete_pair(event, context=None):
+    """Eliminar un par por id"""
+    pair_id = event.get('pathParameters', {}).get('pair_id')
+    if not pair_id:
+        return create_response(400, {'status': 'error', 'message': 'Falta el id del par'})
+    try:
+        pairs_table = dynamodb.Table(PAIRS_TABLE)
+        pairs_table.delete_item(Key={'id': pair_id})
+        return create_response(200, {'status': 'success', 'message': f'Par con id {pair_id} eliminado exitosamente'})
+    except Exception as e:
+        logger.error(f"Error eliminando par: {e}")
+        return create_response(500, {'status': 'error', 'message': f'Error eliminando par: {str(e)}'}) 
