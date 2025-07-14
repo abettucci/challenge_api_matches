@@ -190,7 +190,7 @@ def compare_items(event):
         })
 
 def create_item_pair(event):
-    """Crear un nuevo par de ítems si no existe"""
+    """Crear o actualizar un par de ítems según la lógica de la consigna"""
     try:
         body = json.loads(event.get('body', '{}'))
         
@@ -222,36 +222,86 @@ def create_item_pair(event):
         
         try:
             response = pairs_table.get_item(Key={'pair_id': pair_id})
-            if 'Item' in response:
-                return create_response(200, {
-                    'status': 'success',
-                    'message': 'El par de ítems ya existe en la base de datos',
-                    'pair_id': pair_id,
-                    'action': 'existing'
-                })
+            pair_exists = 'Item' in response
+            existing_item = response.get('Item', {}) if pair_exists else {}
+            existing_status = existing_item.get('status', '') if pair_exists else ''
         except Exception as e:
             logger.error(f"Error verificando par existente: {e}")
+            pair_exists = False
+            existing_status = ''
+            existing_item = {}
         
-        # Crear el nuevo par
-        pair_data = {
-            'pair_id': pair_id,
-            'item_a_id': item_a['item_id'],
-            'item_a_title': item_a['title'],
-            'item_b_id': item_b['item_id'],
-            'item_b_title': item_b['title'],
-            'similarity_score': Decimal(str(calculate_similarity(item_a['title'], item_b['title']))),
-            'created_at': datetime.now().isoformat()
-        }
+        # Calcular similitud
+        similarity_score = calculate_similarity(item_a['title'], item_b['title'])
+        are_equal = similarity_score == 1.0
+        are_similar = similarity_score >= 0.7
         
-        pairs_table.put_item(Item=pair_data)
+        # Determinar el status según la consigna
+        if are_similar or are_equal:
+            new_status = "positivo"
+        else:
+            new_status = "negativo"
         
-        return create_response(201, {
-            'status': 'success',
-            'message': 'Par de ítems creado exitosamente',
-            'pair_id': pair_id,
-            'action': 'created'
-        })
+        # Lógica de regeneración
+        action_message = ""
+        should_update = False
+        now = datetime.now().isoformat()
         
+        if pair_exists:
+            if existing_status == "positivo":
+                action_message = "No se regenera porque ya existe ese par en la base de datos con status positivo"
+                should_update = False
+            elif existing_status == "negativo":
+                if new_status == "positivo":
+                    action_message = "Se regenera porque el par existente era negativo y ahora es positivo"
+                    should_update = True
+                else:
+                    action_message = "No se regenera porque sigue siendo negativo (solo se actualiza updated_at)"
+                    should_update = True  # Para actualizar updated_at aunque siga negativo
+            else:
+                # Para otros status, siempre actualiza
+                action_message = "Se regenera porque el par existente tiene status diferente"
+                should_update = True
+        else:
+            action_message = "Se crea nuevo par en la base de datos"
+            should_update = True
+        
+        if should_update:
+            pair_data = {
+                'pair_id': pair_id,
+                'item_a_id': item_a['item_id'],
+                'item_a_title': item_a['title'],
+                'item_b_id': item_b['item_id'],
+                'item_b_title': item_b['title'],
+                'similarity_score': Decimal(str(similarity_score)),
+                'are_equal': are_equal,
+                'are_similar': are_similar,
+                'status': new_status,
+                'created_at': existing_item.get('created_at', now),
+                'updated_at': now
+            }
+            pairs_table.put_item(Item=pair_data)
+            return create_response(201, {
+                'status': 'success',
+                'message': f'Par de ítems procesado: {action_message}',
+                'pair_id': pair_id,
+                'similarity_score': similarity_score,
+                'are_equal': are_equal,
+                'are_similar': are_similar,
+                'new_status': new_status,
+                'action': 'created_or_updated'
+            })
+        else:
+            return create_response(200, {
+                'status': 'success',
+                'message': action_message,
+                'pair_id': pair_id,
+                'existing_status': existing_status,
+                'similarity_score': float(existing_item.get('similarity_score', 0)),
+                'are_equal': existing_item.get('are_equal', False),
+                'are_similar': existing_item.get('are_similar', False),
+                'action': 'skipped'
+            })
     except Exception as e:
         logger.error(f"Error en create_item_pair: {e}")
         return create_response(500, {

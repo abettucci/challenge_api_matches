@@ -6,7 +6,6 @@ RUN pip install -r requirements.txt
 
 # Copiar código de la aplicación
 COPY lambda_app.py .
-COPY lambda_handler.py .
 
 # Copiar módulo de ML
 COPY ml_similarity.py .
@@ -15,4 +14,4 @@ COPY ml_similarity.py .
 RUN mkdir -p models
 
 # Comando por defecto para Lambda
-CMD ["lambda_handler.lambda_handler"] 
+CMD ["lambda_app.lambda_handler"] 

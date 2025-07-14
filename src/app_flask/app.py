@@ -109,33 +109,45 @@ def create_tables():
     except Exception as e:
         logger.info(f"Tabla de pares ya existe o error: {e}")
 
-def calculate_similarity(title1: str, title2: str) -> float:
-    """Calcular similitud entre dos títulos usando ML o fallback básico"""
-    try:
-        # Intentar usar el modelo de ML
-        from ml_similarity import get_ml_similarity
-        ml_result = get_ml_similarity(title1, title2)
-        return ml_result['similarity_score']
-    except Exception as e:
-        logger.warning(f"Error usando modelo ML, usando fallback básico: {e}")
-        # Fallback a similitud básica
+def calculate_similarity(title1: str, title2: str, force_ml: bool = None) -> float:
+    """
+    Calcular similitud entre dos títulos.
+    - force_ml: True = usar solo ML, False = usar solo tradicional, None = auto (ML si está disponible)
+    """
+    if force_ml is True:
+        try:
+            from ml_similarity import get_ml_similarity
+            ml_result = get_ml_similarity(title1, title2)
+            return ml_result['similarity_score']
+        except Exception as e:
+            raise RuntimeError(f"ML no disponible: {e}")
+    elif force_ml is False:
         from sklearn.feature_extraction.text import TfidfVectorizer
         from sklearn.metrics.pairwise import cosine_similarity
-        
-        # Normalizar títulos
         title1_norm = title1.lower().strip()
         title2_norm = title2.lower().strip()
-        
-        # Si son exactamente iguales
         if title1_norm == title2_norm:
             return 1.0
-        
-        # Calcular similitud usando TF-IDF y cosine similarity
         vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 2))
         tfidf_matrix = vectorizer.fit_transform([title1_norm, title2_norm])
         similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-        
         return float(similarity)
+    else:
+        try:
+            from ml_similarity import get_ml_similarity
+            ml_result = get_ml_similarity(title1, title2)
+            return ml_result['similarity_score']
+        except Exception as e:
+            from sklearn.feature_extraction.text import TfidfVectorizer
+            from sklearn.metrics.pairwise import cosine_similarity
+            title1_norm = title1.lower().strip()
+            title2_norm = title2.lower().strip()
+            if title1_norm == title2_norm:
+                return 1.0
+            vectorizer = TfidfVectorizer(analyzer='word', ngram_range=(1, 2))
+            tfidf_matrix = vectorizer.fit_transform([title1_norm, title2_norm])
+            similarity = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
+            return float(similarity)
 
 def generate_pair_id(item_a: int, item_b: int) -> str:
     """Generar ID único para un par de ítems"""
@@ -240,8 +252,9 @@ def compare_items():
                 'message': 'item_b debe contener item_id y title'
             }), 400
         
-        # Calcular similitud
-        similarity_score = calculate_similarity(item_a['title'], item_b['title'])
+        # En los endpoints /items/compare y /items/pairs, leer use_ml del body y pasarlo a calculate_similarity
+        use_ml = data.get('use_ml', None)
+        similarity_score = calculate_similarity(item_a['title'], item_b['title'], force_ml=use_ml)
         are_equal = similarity_score == 1.0
         are_similar = similarity_score >= 0.7  # Umbral de similitud
         
@@ -340,6 +353,10 @@ def create_item_pair():
                 'message': 'item_b debe contener item_id y title'
             }), 400
         
+        # En los endpoints /items/compare y /items/pairs, leer use_ml del body y pasarlo a calculate_similarity
+        use_ml = data.get('use_ml', None)
+        similarity_score = calculate_similarity(item_a['title'], item_b['title'], force_ml=use_ml)
+        
         # Verificar si el par ya existe
         pair_id = generate_pair_id(item_a['item_id'], item_b['item_id'])
         pairs_table = dynamodb.Table(PAIRS_TABLE)
@@ -363,7 +380,7 @@ def create_item_pair():
             'item_a_title': item_a['title'],
             'item_b_id': item_b['item_id'],
             'item_b_title': item_b['title'],
-            'similarity_score': Decimal(str(calculate_similarity(item_a['title'], item_b['title']))),
+            'similarity_score': Decimal(str(similarity_score)),
             'created_at': datetime.now().isoformat()
         }
         

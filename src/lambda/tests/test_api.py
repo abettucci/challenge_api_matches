@@ -132,21 +132,31 @@ def analyze_results(results: List[Dict]) -> None:
         print("❌ No hay resultados para analizar")
         return
     
-    print("\n" + "="*60)
+    print("\n" + "="*80)
     print("📊 ANÁLISIS DE RESULTADOS")
-    print("="*60)
+    print("="*80)
     
     # Estadísticas generales
     total_pairs = len(results)
     similar_pairs = sum(1 for r in results if r.get('are_similar', False))
     equal_pairs = sum(1 for r in results if r.get('are_equal', False))
     existing_pairs = sum(1 for r in results if r.get('pair_exists', False))
+    positive_pairs = sum(1 for r in results if r.get('new_status') == 'positivo' or r.get('existing_status') == 'positivo')
+    negative_pairs = sum(1 for r in results if r.get('new_status') == 'negativo' or r.get('existing_status') == 'negativo')
+    
+    # Contar acciones
+    created_updated = sum(1 for r in results if r.get('action') == 'created_or_updated')
+    skipped = sum(1 for r in results if r.get('action') == 'skipped')
     
     print(f"📈 Estadísticas Generales:")
     print(f"   • Total de pares analizados: {total_pairs}")
     print(f"   • Pares similares: {similar_pairs} ({similar_pairs/total_pairs*100:.1f}%)")
     print(f"   • Pares iguales: {equal_pairs} ({equal_pairs/total_pairs*100:.1f}%)")
     print(f"   • Pares ya existentes: {existing_pairs} ({existing_pairs/total_pairs*100:.1f}%)")
+    print(f"   • Pares con status positivo: {positive_pairs} ({positive_pairs/total_pairs*100:.1f}%)")
+    print(f"   • Pares con status negativo: {negative_pairs} ({negative_pairs/total_pairs*100:.1f}%)")
+    print(f"   • Pares creados/actualizados: {created_updated}")
+    print(f"   • Pares omitidos (ya positivos): {skipped}")
     
     # Análisis detallado
     print(f"\n🔍 Análisis Detallado:")
@@ -156,13 +166,45 @@ def analyze_results(results: List[Dict]) -> None:
         similarity = result.get('similarity_score', 0)
         are_similar = result.get('are_similar', False)
         are_equal = result.get('are_equal', False)
+        pair_exists = result.get('pair_exists', False)
+        existing_status = result.get('existing_status', '')
+        new_status = result.get('new_status', '')
+        action = result.get('action', '')
+        message = result.get('message', '')
         
-        status = "✅ IGUAL" if are_equal else "🔄 SIMILAR" if are_similar else "❌ DIFERENTE"
+        # Determinar el status final
+        final_status = new_status if new_status else existing_status
         
-        print(f"   {i}. {status}")
+        # Determinar el icono según el status
+        if final_status == 'positivo':
+            status_icon = "✅ POSITIVO"
+        elif final_status == 'negativo':
+            status_icon = "❌ NEGATIVO"
+        else:
+            status_icon = "❓ DESCONOCIDO"
+        
+        # Determinar el icono de acción
+        if action == 'created_or_updated':
+            action_icon = "🔄 REGENERADO/CREADO"
+        elif action == 'skipped':
+            action_icon = "⏭️ OMITIDO"
+        else:
+            action_icon = "❓ DESCONOCIDO"
+        
+        print(f"   {i}. {status_icon} - {action_icon}")
         print(f"      A: {item_a_title}")
         print(f"      B: {item_b_title}")
         print(f"      Similitud: {similarity:.3f}")
+        
+        if pair_exists and existing_status:
+            print(f"      Status existente: {existing_status}")
+        
+        if new_status:
+            print(f"      Nuevo status: {new_status}")
+        
+        if message:
+            print(f"      Nota: {message}")
+        
         print()
 
 def save_results_to_csv(results: List[Dict], filename: str = None) -> None:
@@ -176,6 +218,7 @@ def save_results_to_csv(results: List[Dict], filename: str = None) -> None:
             fieldnames = [
                 'item_a_id', 'item_a_title', 'item_b_id', 'item_b_title',
                 'similarity_score', 'are_similar', 'are_equal', 'pair_exists',
+                'existing_status', 'new_status', 'action', 'message',
                 'pair_id', 'timestamp'
             ]
             writer = csv.DictWriter(file, fieldnames=fieldnames)
@@ -191,6 +234,10 @@ def save_results_to_csv(results: List[Dict], filename: str = None) -> None:
                     'are_similar': result.get('are_similar', False),
                     'are_equal': result.get('are_equal', False),
                     'pair_exists': result.get('pair_exists', False),
+                    'existing_status': result.get('existing_status', ''),
+                    'new_status': result.get('new_status', ''),
+                    'action': result.get('action', ''),
+                    'message': result.get('message', ''),
                     'pair_id': result.get('pair_id', ''),
                     'timestamp': datetime.now().isoformat()
                 })
@@ -200,32 +247,33 @@ def save_results_to_csv(results: List[Dict], filename: str = None) -> None:
         print(f"❌ Error guardando resultados: {e}")
 
 def main():
-    """Función principal de pruebas"""
+    """Función principal"""
     print("🚀 Iniciando pruebas del API de Ítems Similares")
     print("="*60)
     
-    # Configurar URL del API (cambiar según tu deployment)
-    api_url = "https://omdl9zog0a.execute-api.us-east-1.amazonaws.com/prod"
+    # Configuración
+    API_BASE_URL = "https://xqubgjprk1.execute-api.us-east-1.amazonaws.com/prod"  # URL actual del API
     
-    # Crear tester
-    tester = APITester(api_url)
+    # Crear instancia del tester
+    tester = APITester(API_BASE_URL)
     
-    # 1. Health Check
-    print("1️⃣ Verificando salud del API...")
-    health = tester.health_check()
-    if health:
-        print(f"✅ API funcionando: {health.get('message', 'OK')}")
-        print(f"   DynamoDB: {health.get('dynamodb_status', 'Unknown')}")
-        print(f"   Método de similitud: {health.get('similarity_method', 'Unknown')}")
-    else:
-        print("❌ API no está funcionando")
+    # Health check
+    print("🔍 Verificando salud del API...")
+    health_result = tester.health_check()
+    if not health_result:
+        print("❌ El API no está disponible. Verifica la URL y el estado del servicio.")
         return
     
-    # 2. Cargar datos de prueba
-    print("\n2️⃣ Cargando datos de prueba...")
+    print(f"✅ API funcionando: {health_result.get('message', 'OK')}")
     
-    # Intentar cargar desde CSV, si no existe usar datos de muestra
-    test_data = load_test_data_from_csv('data_matches - dataset.csv')
+    # Cargar datos de prueba
+    print("\n📊 Cargando datos de prueba...")
+    
+    # Intentar cargar desde CSV primero
+    csv_path = "data_matches - dataset.csv"  # Archivo CSV del dataset
+    test_data = load_test_data_from_csv(csv_path)
+    
+    # Si no hay datos CSV, usar datos de muestra
     if not test_data:
         print("📝 Usando datos de muestra...")
         test_data = create_sample_data()
@@ -234,46 +282,74 @@ def main():
         print("❌ No se pudieron cargar datos de prueba")
         return
     
-    # 3. Ejecutar comparaciones
-    print(f"\n3️⃣ Ejecutando {len(test_data)} comparaciones...")
+    # Procesar cada par
+    print(f"\n🔄 Procesando {len(test_data)} pares de ítems...")
     results = []
     
-    for i, data in enumerate(test_data, 1):
-        print(f"   Procesando par {i}/{len(test_data)}...")
+    for i, pair_data in enumerate(test_data, 1):
+        item_a = pair_data['item_a']
+        item_b = pair_data['item_b']
         
-        # Comparar ítems
-        comparison = tester.compare_items(data['item_a'], data['item_b'])
-        if comparison:
-            # Agregar información de los ítems al resultado
-            comparison['item_a_id'] = data['item_a']['item_id']
-            comparison['item_a_title'] = data['item_a']['title']
-            comparison['item_b_id'] = data['item_b']['item_id']
-            comparison['item_b_title'] = data['item_b']['title']
-            results.append(comparison)
+        print(f"   Procesando par {i}/{len(test_data)}: {item_a['item_id']} vs {item_b['item_id']}")
+        
+        # Crear el par
+        result = tester.create_pair(item_a, item_b)
+        
+        if result:
+            # Agregar información adicional para el análisis
+            result['item_a_id'] = item_a['item_id']
+            result['item_a_title'] = item_a['title']
+            result['item_b_id'] = item_b['item_id']
+            result['item_b_title'] = item_b['title']
+            results.append(result)
+            
+            # Mostrar resultado inmediato
+            action = result.get('action', 'unknown')
+            if action == 'created_or_updated':
+                print(f"      ✅ {result.get('message', 'Procesado')}")
+            elif action == 'skipped':
+                print(f"      ⏭️ {result.get('message', 'Omitido')}")
+            else:
+                print(f"      ❓ {result.get('message', 'Resultado desconocido')}")
+        else:
+            print(f"      ❌ Error procesando par")
         
         # Pequeña pausa para no sobrecargar el API
         time.sleep(0.1)
     
-    # 4. Analizar resultados
-    print(f"\n4️⃣ Analizando resultados...")
+    # Analizar resultados
     analyze_results(results)
     
-    # 5. Guardar resultados
-    print(f"\n5️⃣ Guardando resultados...")
+    # Guardar resultados
     save_results_to_csv(results)
     
-    # 6. Mostrar todos los pares en la base de datos
-    print(f"\n6️⃣ Consultando todos los pares en la base de datos...")
-    all_pairs = tester.get_all_pairs()
-    if all_pairs:
-        pairs = all_pairs.get('pairs', [])
-        print(f"   Total de pares en DB: {len(pairs)}")
-        if pairs:
-            print("   Últimos 5 pares:")
-            for pair in pairs[-5:]:
-                print(f"   • {pair.get('pair_id', 'N/A')}: {pair.get('item_a_title', 'N/A')} vs {pair.get('item_b_title', 'N/A')}")
+    # Mostrar resumen final
+    print("\n" + "="*60)
+    print("🎉 PRUEBAS COMPLETADAS")
+    print("="*60)
+    print(f"✅ Total de pares procesados: {len(results)}")
+    print(f"✅ Resultados guardados en CSV")
+    print(f"✅ Análisis completado")
     
-    print(f"\n🎉 Pruebas completadas exitosamente!")
+    # Mostrar algunos pares de la base de datos
+    print(f"\n📋 Mostrando pares en la base de datos...")
+    all_pairs = tester.get_all_pairs()
+    if all_pairs and 'pairs' in all_pairs:
+        pairs = all_pairs['pairs']
+        print(f"   Total en BD: {len(pairs)} pares")
+        
+        # Mostrar los primeros 5 pares
+        for i, pair in enumerate(pairs[:5], 1):
+            pair_id = pair.get('id', 'N/A')
+            title = pair.get('title', 'N/A')
+            status = pair.get('status', 'N/A')
+            similarity = pair.get('similarity_score', 0)
+            
+            print(f"   {i}. ID: {pair_id}")
+            print(f"      Título: {title}")
+            print(f"      Status: {status}")
+            print(f"      Similitud: {similarity:.3f}")
+            print()
 
 if __name__ == "__main__":
     main() 

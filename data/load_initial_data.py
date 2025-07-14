@@ -1,6 +1,6 @@
 import pandas as pd
 import boto3
-import os
+import os 
 from datetime import datetime
 from app import calculate_similarity, generate_pair_id
 

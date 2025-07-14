@@ -168,3 +168,5 @@ tmp/
 # Local development
 local_config.py
 config.local.py 
+# Archivo personal de preguntas y respuestas para entrevista
+interview_notes.md 

@@ -22,14 +22,15 @@ jobs:
       with:
         python-version: '3.9'
     
-    - name: Install dependencies
+    - name: Install Flask dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r src/app_flask/requirements.txt
     
-    - name: Run tests
+    - name: Run Flask tests
       run: |
-        pytest test_app.py -v
+        cd src/app_flask
+        pytest
 
   deploy:
     needs: test
@@ -238,7 +239,8 @@ jobs:
         IMAGE_TAG: latest
       run: |
         echo "Building and pushing real application image..."
-        docker build -f Dockerfile.simple -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        cd src/lambda
+        docker build -f Dockerfile.lambda -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "Real image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
     

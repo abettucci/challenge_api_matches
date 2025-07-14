@@ -16,10 +16,10 @@ provider "aws" {
 resource "aws_dynamodb_table" "item_pairs" {
   name           = "item_pairs"
   billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "pair_id"
+  hash_key       = "id"
 
   attribute {
-    name = "pair_id"
+    name = "id"
     type = "S"
   }
 

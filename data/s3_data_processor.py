@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import List, Dict, Any
 import requests
 import time
-
+ 
 class S3DataProcessor:
     def __init__(self, bucket_name: str, api_url: str):
         self.s3_client = boto3.client('s3')
