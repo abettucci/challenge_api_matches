@@ -2,15 +2,7 @@
 
 ## 📋 Descripción General
 
-API RESTful serverless para gestionar pares de ítems similares con validaciones, detección de duplicados y cálculo de similitud automático. El proyecto implementa dos fases de desarrollo: una API Flask para desarrollo local y una API Lambda para producción en AWS.
-
-## 🎯 Objetivo del Challenge
-
-Desarrollar una API que permita:
-- Comparar pares de ítems y determinar si son similares
-- Prevenir la creación de pares duplicados
-- Implementar lógica de regeneración según el status de los pares existentes
-- Proporcionar una solución escalable y serverless
+API RESTful serverless para gestionar pares de ítems similares. El proyecto tiene dos formatos: uno en entorno local (Flask) y otro en entorno cloud (API Lambda en AWS).
 
 ## 🏗️ Arquitectura del Proyecto
 
@@ -63,21 +55,19 @@ challenge_api_matches/
 
 ### ✅ Funcionalidades Implementadas
 
-- **Comparación de ítems**: Determina si dos ítems son iguales, similares o si ya existe el par
-- **Prevención de duplicados**: No permite crear pares duplicados
-- **Cálculo de similitud**: Usa TF-IDF y cosine similarity para calcular similitud entre títulos
-- **Machine Learning**: Modelo XGBoost para mejorar la detección de similitudes
-- **Validaciones**: Valida estructura de datos y campos requeridos
-- **Mensajes informativos**: Respuestas claras en español
-- **Serverless**: AWS Lambda + API Gateway (sin servidores que administrar)
-- **Container Images**: Docker + ECR para manejar dependencias pesadas
-- **CI/CD**: Despliegue automático con GitHub Actions
-- **Base de datos**: DynamoDB (NoSQL) serverless
-- **Pruebas unitarias**: Cobertura completa con pytest
+- **Comparación de ítems**: Determina si dos ítems son iguales, similares o si ya existe el par.
+- **Prevención de duplicados**: No permite crear pares duplicados.
+- **Cálculo de similitud**: Uso de TF-IDF y cosine similarity para calcular similitud entre títulos.
+- **Machine Learning**: uso de modelo XGBoost para mejorar la detección de similitudes.
+- **Validaciones**: Valida estructura de datos y campos requeridos.
+- **Mensajes informativos**: Respuestas claras en español.
+- **Serverless**: AWS Lambda + API Gateway.
+- **Container Images**: Docker + ECR para manejar dependencias pesadas.
+- **CI/CD**: Despliegue automático con GitHub Actions.
+- **Base de datos**: DynamoDB (NoSQL) serverless.
+- **Pruebas unitarias**: Cobertura completa con pytest.
 
-### 🎯 Lógica de Regeneración (Según Consigna)
-
-La API implementa la lógica específica requerida:
+### 🎯 Interpretación de la logica de generación
 
 1. **Si los pares ya existen y es positivo** → **NO se regeneran**
    - Mensaje: "No se regenera porque ya existe ese par en la base de datos con status positivo"
@@ -87,11 +77,6 @@ La API implementa la lógica específica requerida:
 
 3. **Si los pares no existen** → **Se crean nuevos**
    - Mensaje: "Se crea nuevo par en la base de datos"
-
-### 📊 Determinación de Status
-
-- **Status "positivo"**: Cuando `are_similar = true` o `are_equal = true`
-- **Status "negativo"**: Cuando `are_similar = false` y `are_equal = false`
 
 ## 🏗️ Infraestructura AWS
 
@@ -177,7 +162,6 @@ POST /items/compare
   "status": "success",
   "message": "Comparación completada exitosamente",
   "similarity_score": 0.85,
-  "are_equal": false,
   "are_similar": true,
   "pair_exists": false,
   "pair_id": "123_456"
@@ -269,7 +253,7 @@ GET /items/pairs/{pair_id}
 }
 ```
 
-## 🤖 Módulo de Machine Learning
+## 🤖 Bonus: Módulo de Machine Learning
 
 ### Características del Modelo
 
@@ -314,12 +298,7 @@ Content-Type: application/json
 }
 ```
 
-#### Verificar Estado del Modelo
-```http
-GET /ml/status
-```
-
-## 🤖 Comparar clasificación con ML / sin ML
+## 🤖 Comparar resultados de clasificación con/sin ML
 
 Comparar como cambia la clasificación de pares de ítems usando XG Boost vs. TF-IDF + cosine similarity.
 
@@ -480,6 +459,39 @@ El workflow `.github/workflows/deploy.yml` automatiza:
 - ✅ **Lambda**: Actualiza función con nueva imagen
 - ✅ **Testing**: Verifica que la API funcione
 - ✅ **Comentarios**: Informa URLs en PRs
+
+### **Forma recomendada (usando working-directory):**
+
+```yaml
+- name: Prepare ML Model
+  working-directory: ./src/ml
+  run: |
+    echo "Preparing ML model for deployment..."
+    python prepare_ml_model.py
+```
+
+Esto asegura que el script se ejecute en la carpeta correcta y que cualquier archivo generado (como el modelo) quede en el lugar esperado.
+
+---
+
+### **Alternativa (usando el path completo):**
+
+Si prefieres no usar `working-directory`, puedes hacer:
+
+```yaml
+- name: Prepare ML Model
+  run: |
+    echo "Preparing ML model for deployment..."
+    python src/ml/prepare_ml_model.py
+```
+
+Ambas opciones son válidas, pero la primera es más robusta si el script usa rutas relativas.
+
+---
+
+**¡Con este cambio, el error de “No such file or directory” desaparecerá y el modelo ML se preparará correctamente en el pipeline!**
+
+¿Te gustaría que revise si hay otros pasos con problemas de path en tu workflow?
 
 ## 🧪 Testing y Validación
 
@@ -647,7 +659,6 @@ Ejemplo 1:
   B: Telefono celular Samsung Galaxy
   Similarity: 0.85
   Are similar: True
-  Are equal: False
   Status: success
   Mensaje: Comparación completada exitosamente
 

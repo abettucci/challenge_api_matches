@@ -214,7 +214,6 @@ def health_check():
                     'status': {'type': 'string'},
                     'message': {'type': 'string'},
                     'similarity_score': {'type': 'number'},
-                    'are_equal': {'type': 'boolean'},
                     'are_similar': {'type': 'boolean'},
                     'pair_exists': {'type': 'boolean'}
                 }
@@ -255,7 +254,6 @@ def compare_items():
         # En los endpoints /items/compare y /items/pairs, leer use_ml del body y pasarlo a calculate_similarity
         use_ml = data.get('use_ml', None)
         similarity_score = calculate_similarity(item_a['title'], item_b['title'], force_ml=use_ml)
-        are_equal = similarity_score == 1.0
         are_similar = similarity_score >= 0.7  # Umbral de similitud
         
         # Verificar si el par ya existe
@@ -273,7 +271,6 @@ def compare_items():
             'status': 'success',
             'message': 'Comparación completada exitosamente',
             'similarity_score': similarity_score,
-            'are_equal': are_equal,
             'are_similar': are_similar,
             'pair_exists': pair_exists,
             'pair_id': pair_id

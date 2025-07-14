@@ -228,6 +228,7 @@ jobs:
         python -c "import pandas, xgboost, joblib, sklearn; print('✅ All ML dependencies installed successfully')"
     
     - name: Prepare ML Model
+      working-directory: ./src/ml
       run: |
         echo "Preparing ML model for deployment..."
         python prepare_ml_model.py

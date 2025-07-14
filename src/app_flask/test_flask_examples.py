@@ -22,7 +22,6 @@ def main():
         print(f"  B: {pair['item_b']['title']}")
         print(f"  Similarity: {data.get('similarity_score')}")
         print(f"  Are similar: {data.get('are_similar')}")
-        print(f"  Are equal: {data.get('are_equal')}")
         print(f"  Status: {data.get('status')}")
         print(f"  Mensaje: {data.get('message')}")
         print()
