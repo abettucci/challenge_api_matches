@@ -123,8 +123,8 @@ La tabla `item_pairs` usa la estructura correcta según la consigna:
 | **Lambda** | GET    | `/items/pairs/<pair_id>`                 | Obtener un par por ID              | `curl https://zudtat7nv2.execute-api.us-east-1.amazonaws.com/prod/items/pairs/1_2` |
 | **Lambda** | POST   | `/items/compare`                         | Comparar dos ítems                 | `curl -X POST https://zudtat7nv2.execute-api.us-east-1.amazonaws.com/prod/items/compare -H "Content-Type: application/json" -d '{"item_a": {"item_id": 1, "title": "A"}, "item_b": {"item_id": 2, "title": "B"}}'` |
 | **Lambda** | POST   | `/items/pairs`                           | Crear un par de ítems              | `curl -X POST https://zudtat7nv2.execute-api.us-east-1.amazonaws.com/prod/items/pairs -H "Content-Type: application/json" -d '{"item_a": {"item_id": 1, "title": "A"}, "item_b": {"item_id": 2, "title": "B"}}'` |
-| **Lambda** | PUT    | `/items/pairs/<pair_id>`                   | Actualizar campos de un par        | `curl -X PUT https://<api-id>.execute-api.<region>.amazonaws.com/prod/items/pairs/1_2 -H "Content-Type: application/json" -d '{"item_a_title": "Nuevo título"}'` |
-| **Lambda** | DELETE | `/items/pairs/<pair_id>`                   | Eliminar un par por id             | `curl -X DELETE https://<api-id>.execute-api.<region>.amazonaws.com/prod/items/pairs/1_2` |
+| **Lambda** | PUT    | `/items/pairs/<pair_id>`                   | Actualizar campos de un par        | `curl -X PUT https://zudtat7nv2.execute-api.<region>.amazonaws.com/prod/items/pairs/1_2 -H "Content-Type: application/json" -d '{"item_a_title": "Nuevo título"}'` |
+| **Lambda** | DELETE | `/items/pairs/<pair_id>`                   | Eliminar un par por id             | `curl -X DELETE https://zudtat7nv2.execute-api.<region>.amazonaws.com/prod/items/pairs/1_2` |
 
 ## 📚 Documentación de la API
 
