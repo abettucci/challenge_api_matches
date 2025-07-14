@@ -233,6 +233,9 @@ jobs:
         echo "Preparing ML model for deployment..."
         python prepare_ml_model.py
     
+    - name: Copy ML module to Lambda folder
+      run: cp src/ml/ml_similarity.py src/lambda/
+    
     - name: Build and Push Real Application Image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}

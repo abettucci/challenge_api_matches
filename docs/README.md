@@ -255,25 +255,15 @@ GET /items/pairs/{pair_id}
 
 ## 🤖 Bonus: Módulo de Machine Learning
 
-### Características del Modelo
+Agregado de modelo XGBoost para enriquecer la comparacion entre ítems, entrenado con características de texto y similitud semántica con TF-IDF Vectorization.
 
-- **Modelo XGBoost** entrenado con características de texto
-- **TF-IDF Vectorization** para capturar similitud semántica
-- **Características de texto**:
+- **Features de texto que alimentan el modelo**:
   - Diferencia de longitud
   - Ratio de longitud
   - Diferencia en número de palabras
   - Ratio de palabras
   - Coincidencia exacta
   - Palabras compartidas
-  - Similitud TF-IDF
-
-### Configuración XGBoost (iterar a futuro)
-- **n_estimators**: 100
-- **max_depth**: 6
-- **learning_rate**: 0.1
-- **eval_metric**: logloss
-- **early_stopping**: 10 rounds
 
 ### Endpoints ML
 
@@ -331,17 +321,10 @@ cd src/app_flask
 python compare_ml_vs_traditional.py
 ```
 
-Esto recorrerá el dataset y mostrará para cada par:
-- El score de similitud con y sin ML
-- Cuáles pares cambian de negativo a positivo (o viceversa)
-- Estadísticas de cuántos pares son positivos con cada método
-
-### 3. Interpretar los resultados
-- **Total positivos sin ML:** Pares clasificados como similares usando solo el método tradicional.
-- **Total positivos con ML:** Pares clasificados como similares usando el modelo de Machine Learning.
-- **Diferencia de positivos:** Cuántos pares adicionales (o menos) son considerados similares al usar ML.
-
-Esto te permite demostrar el valor agregado del modelo ML frente al método tradicional.
+Esto recorre todo el dataset y para cada par de items muestra:
+- Score de similitud con/sin ML
+- Que pares cambian de negativo a positivo (o viceversa)
+- Estadísticas de cuántos pares son positivos con cada método 
 
 ## 🛠️ Instalación y Desarrollo Local
 
@@ -460,39 +443,6 @@ El workflow `.github/workflows/deploy.yml` automatiza:
 - ✅ **Testing**: Verifica que la API funcione
 - ✅ **Comentarios**: Informa URLs en PRs
 
-### **Forma recomendada (usando working-directory):**
-
-```yaml
-- name: Prepare ML Model
-  working-directory: ./src/ml
-  run: |
-    echo "Preparing ML model for deployment..."
-    python prepare_ml_model.py
-```
-
-Esto asegura que el script se ejecute en la carpeta correcta y que cualquier archivo generado (como el modelo) quede en el lugar esperado.
-
----
-
-### **Alternativa (usando el path completo):**
-
-Si prefieres no usar `working-directory`, puedes hacer:
-
-```yaml
-- name: Prepare ML Model
-  run: |
-    echo "Preparing ML model for deployment..."
-    python src/ml/prepare_ml_model.py
-```
-
-Ambas opciones son válidas, pero la primera es más robusta si el script usa rutas relativas.
-
----
-
-**¡Con este cambio, el error de “No such file or directory” desaparecerá y el modelo ML se preparará correctamente en el pipeline!**
-
-¿Te gustaría que revise si hay otros pasos con problemas de path en tu workflow?
-
 ## 🧪 Testing y Validación
 
 ### Scripts de Testing Disponibles
@@ -508,6 +458,9 @@ python test_api.py
 # Test completo del dataset (con solucion local)
 cd src/app_flask
 pytest tests/test_flask_api.py
+
+# Probar la API Flask con 5 pares de ejemplo (igual que en Lambda)
+python test_flask_examples.py
 ```
 
 **Características:**
@@ -516,109 +469,31 @@ pytest tests/test_flask_api.py
 - Genera CSV con resultados
 - Valida lógica de regeneración
 
-### Ejemplo de Salida del Test Completo
+## 🔧 Configuración
 
-```
-📊 ANÁLISIS DE RESULTADOS
-================================================================================
-📈 Estadísticas Generales:
-   • Total de pares analizados: 28
-   • Pares similares: 15 (53.6%)
-   • Pares iguales: 2 (7.1%)
-   • Pares ya existentes: 5 (17.9%)
-   • Pares con status positivo: 17 (60.7%)
-   • Pares con status negativo: 11 (39.3%)
-   • Pares creados/actualizados: 23
-   • Pares omitidos (ya positivos): 5
-
-🔍 Análisis Detallado:
-   1. ✅ POSITIVO - 🔄 REGENERADO/CREADO
-      A: Telefono Samsung Galaxy
-      B: Telefono celular Samsung Galaxy
-      Similitud: 0.850
-      Nuevo status: positivo
-      Nota: Se crea nuevo par en la base de datos
-
-   2. ⏭️ OMITIDO
-      A: Laptop HP 15 pulgadas
-      B: Notebook HP 15 inch
-      Similitud: 0.750
-      Status existente: positivo
-      Nota: No se regenera porque ya existe ese par en la base de datos con status positivo
-```
-
-## 📊 Métricas de Calidad
-
-### Cobertura de Testing
-- **Total de pares**: 28 pares del dataset original
-- **Cobertura**: 100% de los pares procesados
-- **Validación**: Lógica de regeneración verificada
-
-### Rendimiento
-- **Tiempo de respuesta**: < 100ms por comparación
-- **Cold start**: ~2-3 segundos (Lambda)
-- **Warm start**: < 100ms
-
-### Precisión del Modelo ML
-- **Datos sintéticos**: ~95%
-- **Datos reales**: Depende de la calidad de los datos
-- **Tamaño del modelo**: ~2-5MB (compatible con Lambda)
-
-## 🔧 Configuración y Personalización
-
-### Umbral de Similitud
+### Umbral de Similitud (en el file ml_similarity.py)
 ```python
-# En ml_similarity.py
-'are_similar': similarity_score >= 0.7  # Configurable
+'are_similar': similarity_score >= 0.7
 ```
 
-### Características TF-IDF
+### Configuración del vectorizer TF-IDF
 ```python
-# Configuración del vectorizer
 TfidfVectorizer(
-    analyzer='word',
-    ngram_range=(1, 2),  # Unigramas y bigramas
-    max_features=1000,   # Máximo 1000 características
-    min_df=2            # Mínimo 2 documentos
+    analyzer='word', # analiza por palabras
+    ngram_range=(1, 2),  # usa pares de palabras tambien
+    max_features=1000, 
+    min_df=2 
 )
 ```
 
-## 🚀 Próximas Mejoras
+### Configuración XGBoost (iterar a futuro)
+- **n_estimators**: 100
+- **max_depth**: 6
+- **learning_rate**: 0.1
+- **eval_metric**: logloss
+- **early_stopping**: 10 rounds
 
-### Fase 2: Atributos Adicionales
-- [ ] Integrar categorías de productos
-- [ ] Análisis de precios
-- [ ] Comparación de marcas
-- [ ] Características técnicas
-
-### Fase 3: Análisis de Imágenes
-- [ ] Integración con modelos de visión (CLIP, ResNet)
-- [ ] Extracción de características visuales
-- [ ] Comparación de similitud visual
-- [ ] Análisis de colores y patrones
-
-## 🐛 Troubleshooting
-
-### Problemas Comunes
-
-#### Modelo no se carga
-```bash
-# Verificar que el archivo existe
-ls -la src/ml/models/similarity_model.pkl
-
-# Reentrenar modelo
-cd src/ml
-python train_ml_model.py
-```
-
-#### Error de dependencias
-```bash
-# Instalar dependencias de ML
-pip install xgboost joblib scikit-learn
-
-# Instalar dependencias básicas
-pip install -r requirements_basic.txt
-```
+## Troubleshooting
 
 #### Error de AWS credentials
 ```bash
@@ -634,35 +509,3 @@ aws sts get-caller-identity
 # Verificar tabla existe
 aws dynamodb describe-table --table-name item_pairs
 ```
-
-## 🧪 Ejemplos de comparación de ítems en Flask
-
-Puedes probar rápidamente la API Flask con 5 pares de ejemplo (igual que en Lambda) usando el script:
-
-```bash
-cd src/app_flask
-python test_flask_examples.py
-```
-
-Esto mostrará en consola, para cada par:
-- Los títulos de los ítems
-- El score de similitud
-- Si son similares o iguales
-- El status y el mensaje de la API
-
-**Ejemplo de salida:**
-```
-=== Ejemplos de comparación de ítems (Flask) ===
-
-Ejemplo 1:
-  A: Telefono Samsung Galaxy
-  B: Telefono celular Samsung Galaxy
-  Similarity: 0.85
-  Are similar: True
-  Status: success
-  Mensaje: Comparación completada exitosamente
-
-...
-```
-
-Esto te permite comparar fácilmente el comportamiento de Flask y Lambda con los mismos pares de ejemplo.
