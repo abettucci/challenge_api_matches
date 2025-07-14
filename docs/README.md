@@ -269,14 +269,6 @@ GET /items/pairs/{pair_id}
 }
 ```
 
-### Códigos de Estado HTTP
-
-- `200`: Operación exitosa
-- `201`: Recurso creado exitosamente
-- `400`: Datos de entrada inválidos
-- `404`: Recurso no encontrado
-- `500`: Error interno del servidor
-
 ## 🤖 Módulo de Machine Learning
 
 ### Características del Modelo
@@ -292,7 +284,7 @@ GET /items/pairs/{pair_id}
   - Palabras compartidas
   - Similitud TF-IDF
 
-### Configuración XGBoost
+### Configuración XGBoost (iterar a futuro)
 - **n_estimators**: 100
 - **max_depth**: 6
 - **learning_rate**: 0.1
@@ -301,7 +293,7 @@ GET /items/pairs/{pair_id}
 
 ### Endpoints ML
 
-#### Entrenar Modelo
+#### Entrenar Modelo (posible mejora a futuro)
 ```http
 POST /ml/train
 Content-Type: application/json
@@ -327,15 +319,15 @@ Content-Type: application/json
 GET /ml/status
 ```
 
-## 🤖 Comparar el impacto de Machine Learning vs método tradicional
+## 🤖 Comparar clasificación con ML / sin ML
 
-Puedes comparar fácilmente cómo cambia la clasificación de pares de ítems usando el modelo de Machine Learning frente al método tradicional (TF-IDF + cosine similarity).
+Comparar como cambia la clasificación de pares de ítems usando XG Boost vs. TF-IDF + cosine similarity.
 
 ### 1. Probar un par con y sin ML desde la API
 
-Envía el parámetro `use_ml` en el body de los endpoints `/items/compare` o `/items/pairs`:
+A través del parámetro `use_ml` en el body de los endpoints `/items/compare` o `/items/pairs` se determina con que metodo calcular la similitud del par de items:
 
-- Forzar ML:
+- Forzar con ML:
 ```json
 {
   "item_a": {"item_id": 1, "title": "Telefono movil"},
@@ -343,7 +335,7 @@ Envía el parámetro `use_ml` en el body de los endpoints `/items/compare` o `/i
   "use_ml": true
 }
 ```
-- Forzar método tradicional:
+- Forzar sin ML:
 ```json
 {
   "item_a": {"item_id": 1, "title": "Telefono movil"},
